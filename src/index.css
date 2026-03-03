@@ -10,6 +10,9 @@ body {
   color: #f3f4f6;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 #root {

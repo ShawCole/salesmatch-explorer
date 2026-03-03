@@ -67,6 +67,7 @@ export function MapView() {
   }, [applyFeatureStates]);
 
   // Also apply when the source finishes loading (handles race condition)
+  // and on map idle (catches cases where sourcedata fires before listener is attached)
   useEffect(() => {
     const map = mapRef.current?.getMap();
     if (!map) return;
@@ -77,8 +78,16 @@ export function MapView() {
       }
     };
 
+    const onIdle = () => {
+      applyFeatureStates();
+    };
+
     map.on('sourcedata', onSourceData);
-    return () => { map.off('sourcedata', onSourceData as any); };
+    map.on('idle', onIdle);
+    return () => {
+      map.off('sourcedata', onSourceData as any);
+      map.off('idle', onIdle);
+    };
   }, [applyFeatureStates]);
 
   // Derive hover data from current state — always fresh, no stale values after clicks
