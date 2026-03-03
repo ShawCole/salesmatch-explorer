@@ -4,7 +4,8 @@ const isMobile = typeof window !== 'undefined' && window.matchMedia('(pointer: c
 
 /**
  * Returns a ref and onTouchStart handler for a chart container.
- * On touch devices, fades out Recharts tooltips after 5s then removes them.
+ * On touch devices, fades the Recharts tooltip to transparent after 5s
+ * but keeps it in the DOM so the next tap can reactivate it.
  */
 export function useMobileTooltipDismiss() {
   const ref = useRef<HTMLDivElement>(null);
@@ -12,19 +13,22 @@ export function useMobileTooltipDismiss() {
 
   const onTouchStart = useCallback(() => {
     if (!isMobile) return;
+    const el = ref.current;
+    if (!el) return;
+
+    // Reset opacity immediately on new tap
+    const tooltip = el.querySelector('.recharts-tooltip-wrapper') as HTMLElement | null;
+    if (tooltip) {
+      tooltip.style.transition = 'none';
+      tooltip.style.opacity = '1';
+    }
+
     clearTimeout(timer.current);
     timer.current = setTimeout(() => {
-      const el = ref.current;
-      if (!el) return;
-      // Find the Recharts tooltip wrapper and fade it out
-      const tooltip = el.querySelector('.recharts-tooltip-wrapper') as HTMLElement | null;
-      if (tooltip) {
-        tooltip.style.transition = 'opacity 0.5s ease-out';
-        tooltip.style.opacity = '0';
-        // After fade completes, dispatch mouseleave to fully remove
-        setTimeout(() => {
-          el.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
-        }, 500);
+      const tip = el.querySelector('.recharts-tooltip-wrapper') as HTMLElement | null;
+      if (tip) {
+        tip.style.transition = 'opacity 0.5s ease-out';
+        tip.style.opacity = '0';
       }
     }, 5000);
   }, []);

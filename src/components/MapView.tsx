@@ -26,7 +26,6 @@ export function MapView() {
   const [hoveredZip, setHoveredZip] = useState<string | null>(null);
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
   const [zipFading, setZipFading] = useState(false);
-  const fadeClearRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
@@ -129,13 +128,9 @@ export function MapView() {
       setHoveredZip(zip);
       setHoverPos({ x: e.point.x, y: e.point.y });
       setZipFading(false);
-      clearTimeout(fadeClearRef.current);
       if (isMobile) {
         if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-        hoverTimerRef.current = setTimeout(() => {
-          setZipFading(true);
-          fadeClearRef.current = setTimeout(clearHover, 500);
-        }, 5000);
+        hoverTimerRef.current = setTimeout(() => setZipFading(true), 5000);
       }
     } else {
       clearHover();

@@ -19,20 +19,13 @@ export function LanguageDoughnut({ segments, totalCount: _totalCount, height = '
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const { ref: tipRef, getStyle } = useTooltipFlip();
   const fadeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const clearTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const isMobile = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
 
   useEffect(() => {
     if (hover && isMobile) {
       setFading(false);
-      fadeTimer.current = setTimeout(() => {
-        setFading(true);
-        clearTimer.current = setTimeout(() => setHover(null), 500);
-      }, 5000);
-      return () => {
-        clearTimeout(fadeTimer.current);
-        clearTimeout(clearTimer.current);
-      };
+      fadeTimer.current = setTimeout(() => setFading(true), 5000);
+      return () => clearTimeout(fadeTimer.current);
     }
   }, [hover, isMobile]);
 
@@ -41,6 +34,7 @@ export function LanguageDoughnut({ segments, totalCount: _totalCount, height = '
   }, []);
 
   const onEnter = useCallback((_: unknown, index: number) => {
+    setFading(false);
     setHover(segments[index]);
   }, [segments]);
 
