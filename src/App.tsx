@@ -99,7 +99,7 @@ function App() {
   if (isMobile) {
     return (
       <FilterProvider>
-        <div className="relative w-screen h-screen overflow-hidden bg-gray-950">
+        <div className="relative w-screen h-dvh overflow-hidden bg-gray-950">
           <MapView />
           <div className="absolute top-0 left-0 right-0 z-10 p-3 pointer-events-none">
             <FilterBar onCollapseChange={setFiltersCollapsed} />
