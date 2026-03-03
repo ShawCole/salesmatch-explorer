@@ -15,15 +15,24 @@ export function LanguageDoughnut({ segments, totalCount: _totalCount, height = '
   const total = segments.reduce((s, seg) => s + seg.value, 0) || 1;
 
   const [hover, setHover] = useState<{ name: string; value: number } | null>(null);
+  const [fading, setFading] = useState(false);
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const { ref: tipRef, getStyle } = useTooltipFlip();
   const fadeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const clearTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const isMobile = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
 
   useEffect(() => {
     if (hover && isMobile) {
-      fadeTimer.current = setTimeout(() => setHover(null), 5000);
-      return () => clearTimeout(fadeTimer.current);
+      setFading(false);
+      fadeTimer.current = setTimeout(() => {
+        setFading(true);
+        clearTimer.current = setTimeout(() => setHover(null), 500);
+      }, 5000);
+      return () => {
+        clearTimeout(fadeTimer.current);
+        clearTimeout(clearTimer.current);
+      };
     }
   }, [hover, isMobile]);
 
@@ -65,7 +74,7 @@ export function LanguageDoughnut({ segments, totalCount: _totalCount, height = '
         <div
           ref={tipRef}
           className="pointer-events-none fixed z-[9999]"
-          style={{ left: tipPos.left, top: tipPos.top }}
+          style={{ left: tipPos.left, top: tipPos.top, opacity: fading ? 0 : 1, transition: 'opacity 0.5s ease-out' }}
         >
           <div
             style={{

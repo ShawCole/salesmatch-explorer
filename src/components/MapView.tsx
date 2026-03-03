@@ -25,6 +25,8 @@ export function MapView() {
   const [mapReady, setMapReady] = useState(false);
   const [hoveredZip, setHoveredZip] = useState<string | null>(null);
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
+  const [zipFading, setZipFading] = useState(false);
+  const fadeClearRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
@@ -126,9 +128,14 @@ export function MapView() {
       const zip = feature.properties?.ZCTA5CE20 || feature.properties?.ZCTA5CE10 || feature.properties?.ZIP;
       setHoveredZip(zip);
       setHoverPos({ x: e.point.x, y: e.point.y });
+      setZipFading(false);
+      clearTimeout(fadeClearRef.current);
       if (isMobile) {
         if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-        hoverTimerRef.current = setTimeout(clearHover, 5000);
+        hoverTimerRef.current = setTimeout(() => {
+          setZipFading(true);
+          fadeClearRef.current = setTimeout(clearHover, 500);
+        }, 5000);
       }
     } else {
       clearHover();
@@ -303,7 +310,7 @@ export function MapView() {
       {hoveredZip && hoverPos && (
         <div
           className="glass-light rounded-lg px-3 py-2 pointer-events-none absolute z-20"
-          style={{ left: hoverPos.x + 12, top: hoverPos.y - 30 }}
+          style={{ left: hoverPos.x + 12, top: hoverPos.y - 30, opacity: zipFading ? 0 : 1, transition: 'opacity 0.5s ease-out' }}
         >
           <div className="text-xs font-medium text-white">ZIP {hoveredZip}</div>
           <div className="text-xs text-gray-300">
