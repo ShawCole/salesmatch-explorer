@@ -36,7 +36,7 @@ function AngledTick({ x, y, payload }: { x: number; y: number; payload: { value:
 
 export function BarChart({ data, color = '#7c3aed', height = '100%', xAxisHeight = 38 }: Props) {
   return (
-    <ResponsiveContainer width="100%" height={height}>
+    <ResponsiveContainer width="100%" height={height as number | `${number}%`}>
       <RechartsBarChart data={data} margin={{ top: 4, right: 4, bottom: 17, left: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
         <XAxis

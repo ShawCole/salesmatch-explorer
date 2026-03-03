@@ -1,6 +1,5 @@
 import { useMemo, useCallback } from 'react';
 import { useFilters } from '../contexts/FilterContext';
-import { useZipAggregation } from '../hooks/useZipAggregation';
 import { ZIP_TO_COUNTY } from '../utils/zipCounty';
 import { MapPin, Download } from 'lucide-react';
 import type { IntentRecord } from '../types/record';
@@ -136,7 +135,6 @@ function describeArea(
 
 export function StatsBar({ hideExport }: { hideExport?: boolean } = {}) {
   const { filters, filteredRecords, allRecords, totalCount } = useFilters();
-  const zipCounts = useZipAggregation(filteredRecords);
 
   const zipToCity = useMemo(() => buildZipToCity(allRecords as any[]), [allRecords]);
 

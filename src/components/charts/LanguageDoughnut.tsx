@@ -11,7 +11,7 @@ interface Props {
   compact?: boolean;
 }
 
-export function LanguageDoughnut({ segments, totalCount, height = '100%', compact }: Props) {
+export function LanguageDoughnut({ segments, totalCount: _totalCount, height = '100%', compact }: Props) {
   const total = segments.reduce((s, seg) => s + seg.value, 0) || 1;
 
   const [hover, setHover] = useState<{ name: string; value: number } | null>(null);

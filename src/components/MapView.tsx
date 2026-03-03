@@ -51,7 +51,7 @@ export function MapView() {
       if (zipCode) {
         const zip = String(zipCode).padStart(5, '0');
         map.setFeatureState(
-          { source: 'zips', id: feature.id },
+          { source: 'zips', id: feature.id } as any,
           {
             density: zipCounts.get(zip) || 0,
             baseDensity: allZipCounts.get(zip) || 0,
@@ -71,14 +71,14 @@ export function MapView() {
     const map = mapRef.current?.getMap();
     if (!map) return;
 
-    const onSourceData = (e: { sourceId: string; isSourceLoaded: boolean }) => {
+    const onSourceData = (e: any) => {
       if (e.sourceId === 'zips' && e.isSourceLoaded) {
         applyFeatureStates();
       }
     };
 
     map.on('sourcedata', onSourceData);
-    return () => { map.off('sourcedata', onSourceData); };
+    return () => { map.off('sourcedata', onSourceData as any); };
   }, [applyFeatureStates]);
 
   // Derive hover data from current state — always fresh, no stale values after clicks

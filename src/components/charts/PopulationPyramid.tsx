@@ -38,7 +38,7 @@ export function PopulationPyramid({ data, height = '100%', compact }: Props) {
     : [-nice, -half, -nice / 4, 0, nice / 4, half, nice];
 
   return (
-    <ResponsiveContainer width="100%" height={height}>
+    <ResponsiveContainer width="100%" height={height as number | `${number}%`}>
       <BarChart
         data={data}
         layout="vertical"
@@ -65,7 +65,7 @@ export function PopulationPyramid({ data, height = '100%', compact }: Props) {
           axisLine={false}
           tickLine={false}
           width={42}
-          tickFormatter={(v: string) => v === '65 and older' ? '65+' : v}
+          tickFormatter={(v: any) => v === '65 and older' ? '65+' : String(v)}
         />
         <Tooltip
           cursor={false}
@@ -76,14 +76,14 @@ export function PopulationPyramid({ data, height = '100%', compact }: Props) {
             color: '#f3f4f6',
             fontSize: 12,
           }}
-          labelFormatter={(label: string) => label === '65 and older' ? '65+' : label}
-          formatter={(value: number, name: string) => [
-            Math.abs(value).toLocaleString(),
+          labelFormatter={(label: any) => String(label) === '65 and older' ? '65+' : String(label)}
+          formatter={(value: any, name: any) => [
+            Math.abs(Number(value)).toLocaleString(),
             name === 'female' ? 'Female' : 'Male',
           ]}
         />
         <ReferenceLine x={0} stroke="rgba(255,255,255,0.2)" />
-        <Bar dataKey="female" stackId="pyramid" fill="#ec4899" animationDuration={500} shape={(props: Record<string, unknown>) => {
+        <Bar dataKey="female" stackId="pyramid" fill="#ec4899" animationDuration={500} shape={(props: any) => {
           const { x, y, width, height: h } = props as { x: number; y: number; width: number; height: number };
           const absW = Math.abs(width);
           const r = Math.min(4, absW / 2, h / 2);
@@ -95,7 +95,7 @@ export function PopulationPyramid({ data, height = '100%', compact }: Props) {
             />
           );
         }} />
-        <Bar dataKey="male" stackId="pyramid" fill="#3b82f6" animationDuration={500} shape={(props: Record<string, unknown>) => {
+        <Bar dataKey="male" stackId="pyramid" fill="#3b82f6" animationDuration={500} shape={(props: any) => {
           const { x, y, width, height: h } = props as { x: number; y: number; width: number; height: number };
           const absW = Math.abs(width);
           const r = Math.min(4, absW / 2, h / 2);
