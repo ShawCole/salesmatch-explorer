@@ -109,7 +109,7 @@ function App() {
           </div>
           <div
             className="absolute bottom-0 left-0 right-0 z-20 flex flex-col pointer-events-auto bg-gray-950/95 backdrop-blur-lg border-t border-white/10 transition-all duration-300"
-            style={{ maxHeight: panelOpen ? 'calc(244px + 70px)' : '0px' }}
+            style={{ maxHeight: panelOpen ? 'calc(244px + 70px + env(safe-area-inset-bottom, 0px))' : '0px' }}
             onPointerEnter={() => window.dispatchEvent(new Event('chart-panel-enter'))}
           >
             <div className="flex-1 min-h-0 overflow-y-auto snap-y snap-mandatory scroll-smooth">
@@ -144,7 +144,7 @@ function App() {
           <button
             onClick={() => setPanelOpen(prev => !prev)}
             className="absolute left-1/2 -translate-x-1/2 z-30 pointer-events-auto px-6 py-1 rounded-t-lg bg-gray-950/90 backdrop-blur border border-b-0 border-white/10 text-gray-400 transition-all"
-            style={{ bottom: panelOpen ? 'calc(244px + 70px)' : '0px', transition: 'bottom 0.3s' }}
+            style={{ bottom: panelOpen ? 'calc(244px + 70px + env(safe-area-inset-bottom, 0px))' : '0px', transition: 'bottom 0.3s' }}
           >
             <svg width="20" height="10" viewBox="0 0 20 10" className={`transition-transform duration-300 ${panelOpen ? '' : 'rotate-180'}`}>
               <path d="M2 2 L10 8 L18 2" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
