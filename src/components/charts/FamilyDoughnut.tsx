@@ -56,7 +56,7 @@ export function FamilyDoughnut({ records, height = '100%', compact }: Props) {
   const [hover, setHover] = useState<{ name: string; value: number } | null>(null);
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const { ref: tipRef, getStyle } = useTooltipFlip();
-  const fadeTimer = useRef<ReturnType<typeof setTimeout>>();
+  const fadeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const isMobile = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
 
   useEffect(() => {
