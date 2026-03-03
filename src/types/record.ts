@@ -1,4 +1,5 @@
 export interface IntentRecord {
+  [key: string]: string;
   AGE_RANGE: string;
   CHILDREN: string;
   COMPANY_NAME: string;

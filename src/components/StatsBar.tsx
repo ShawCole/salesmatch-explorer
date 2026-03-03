@@ -1,8 +1,37 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useFilters } from '../contexts/FilterContext';
 import { useZipAggregation } from '../hooks/useZipAggregation';
 import { ZIP_TO_COUNTY } from '../utils/zipCounty';
 import { MapPin, Download } from 'lucide-react';
+import type { IntentRecord } from '../types/record';
+
+function exportCSV(records: IntentRecord[]) {
+  if (records.length === 0) return;
+  // Collect ALL unique columns across all records (not just the first one)
+  const headerSet = new Set<string>();
+  for (const r of records) {
+    for (const k of Object.keys(r)) headerSet.add(k);
+  }
+  const headers = Array.from(headerSet);
+  const escape = (v: unknown) => {
+    const s = String(v ?? '');
+    return s.includes(',') || s.includes('"') || s.includes('\n')
+      ? `"${s.replace(/"/g, '""')}"`
+      : s;
+  };
+  const rows = [
+    headers.join(','),
+    ...records.map(r => headers.map(h => escape(r[h])).join(',')),
+  ];
+  const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const date = new Date().toISOString().slice(0, 10);
+  a.download = `intent-export-${date}-${records.length}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 function toTitleCase(s: string): string {
   return s.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
@@ -111,6 +140,8 @@ export function StatsBar({ hideExport }: { hideExport?: boolean } = {}) {
 
   const zipToCity = useMemo(() => buildZipToCity(allRecords as any[]), [allRecords]);
 
+  const handleExport = useCallback(() => exportCSV(filteredRecords as IntentRecord[]), [filteredRecords]);
+
   const areaLabel = useMemo(() => {
     // If specific ZIPs selected on map, describe those
     if (filters.selectedZips.size > 0) {
@@ -155,7 +186,10 @@ export function StatsBar({ hideExport }: { hideExport?: boolean } = {}) {
 
         {/* Export */}
         {!hideExport && (
-          <button className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-purple-600/30 hover:bg-purple-600/50 border border-purple-400/20 text-purple-200 text-[11px] font-medium transition-colors">
+          <button
+            onClick={handleExport}
+            className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-purple-600/30 hover:bg-purple-600/50 border border-purple-400/20 text-purple-200 text-[11px] font-medium transition-colors"
+          >
             <Download size={12} />
             Export
           </button>

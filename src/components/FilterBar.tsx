@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { useFilters, type MultiSelectKey } from '../contexts/FilterContext';
-import { HOME_VALUE_ORDER, AGE_RANGE_ORDER, GENDER_ORDER, INCOME_RANGE_ORDER, INCOME_RANGE_LABELS, NET_WORTH_ORDER, NET_WORTH_LABELS, CREDIT_RATING_ORDER, CREDIT_RATING_LABELS, SENIORITY_ORDER, SENIORITY_LABELS, LANGUAGE_CODE_LABELS } from '../utils/constants';
+import { HOME_VALUE_ORDER, AGE_RANGE_ORDER, AGE_RANGE_LABELS, GENDER_ORDER, INCOME_RANGE_ORDER, INCOME_RANGE_LABELS, NET_WORTH_ORDER, NET_WORTH_LABELS, CREDIT_RATING_ORDER, CREDIT_RATING_LABELS, SENIORITY_ORDER, SENIORITY_LABELS, LANGUAGE_CODE_LABELS } from '../utils/constants';
 import { ZIP_TO_COUNTY } from '../utils/zipCounty';
 import { X, Copy, Check, ChevronDown } from 'lucide-react';
 import { MultiSelectPopover } from './MultiSelectPopover';
@@ -234,11 +234,11 @@ export function FilterBar({ onCollapseChange }: { onCollapseChange?: (collapsed:
       }
     }
     const rangeLabels = runs.map(run => {
-      if (run.length === 1) return run[0];
+      if (run.length === 1) return AGE_RANGE_LABELS[run[0]] ?? run[0];
       const first = run[0];
       const last = run[run.length - 1];
       const low = first.split('-')[0];
-      if (last.endsWith('+')) return `${low}+`;
+      if (last === '65 and older') return `${low}+`;
       const high = last.split('-')[1];
       return `${low}-${high}`;
     });
@@ -420,6 +420,7 @@ export function FilterBar({ onCollapseChange }: { onCollapseChange?: (collapsed:
           <MultiSelectPopover
             label={isMobile ? 'Age' : 'Age Range'}
             options={AGE_RANGE_ORDER}
+            labelMap={AGE_RANGE_LABELS}
             filter={filters.ageRange}
             onToggle={handleToggle('ageRange')}
             onClear={handleClear('ageRange')}

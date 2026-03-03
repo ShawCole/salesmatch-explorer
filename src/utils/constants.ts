@@ -5,8 +5,12 @@ export const HOME_VALUE_ORDER = [
 ];
 
 export const AGE_RANGE_ORDER = [
-  '18-24', '25-34', '35-44', '45-54', '55-64', '65+',
+  '18-24', '25-34', '35-44', '45-54', '55-64', '65 and older',
 ];
+
+export const AGE_RANGE_LABELS: Record<string, string> = {
+  '65 and older': '65+',
+};
 
 export const CREDIT_RATING_ORDER = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 

@@ -35,7 +35,7 @@ export function PopulationPyramid({ data, height = '100%', compact }: Props) {
   const half = nice / 2;
   const symmetricTicks = compact
     ? [-nice, -half, 0, half, nice]
-    : [-nice, -nice * 2 / 3, -nice / 3, 0, nice / 3, nice * 2 / 3, nice];
+    : [-nice, -half, -nice / 4, 0, nice / 4, half, nice];
 
   return (
     <ResponsiveContainer width="100%" height={height}>
@@ -65,6 +65,7 @@ export function PopulationPyramid({ data, height = '100%', compact }: Props) {
           axisLine={false}
           tickLine={false}
           width={42}
+          tickFormatter={(v: string) => v === '65 and older' ? '65+' : v}
         />
         <Tooltip
           cursor={false}
@@ -75,6 +76,7 @@ export function PopulationPyramid({ data, height = '100%', compact }: Props) {
             color: '#f3f4f6',
             fontSize: 12,
           }}
+          labelFormatter={(label: string) => label === '65 and older' ? '65+' : label}
           formatter={(value: number, name: string) => [
             Math.abs(value).toLocaleString(),
             name === 'female' ? 'Female' : 'Male',

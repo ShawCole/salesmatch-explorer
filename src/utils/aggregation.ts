@@ -82,7 +82,7 @@ export function buildPyramid(
     // Consolidate 65+ variants into single bin
     const lower = age.toLowerCase();
     if (lower === '65 and older' || lower === '65-74' || lower === '75+' || lower === '65+') {
-      age = '65+';
+      age = '65 and older';
     }
 
     if (age && map.has(age)) {
