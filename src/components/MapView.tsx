@@ -51,7 +51,7 @@ function computeZipBounds(
   return found ? [minLng, minLat, maxLng, maxLat] : null;
 }
 
-export function MapView() {
+export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
   useRenderPerf('MapView');
   const mapRef = useRef<MapRef>(null);
   const { filteredRecords, baseFilteredRecords, demographicFilteredRecords, allRecords, filters, dispatch } = useFilters();
@@ -129,8 +129,8 @@ export function MapView() {
     };
   }, [applyFeatureStates, mapReady]);
 
-  // Auto-zoom whenever the visible ZIP set changes (including initial load)
-  const prevZipKey = useRef<string>('');
+  // Auto-zoom whenever the visible ZIP set or mobile panel state changes
+  const prevFitKey = useRef<string>('');
   useEffect(() => {
     if (!mapReady || !geojson || geojson.features.length === 0) return;
 
@@ -146,28 +146,29 @@ export function MapView() {
     }
     if (zipsWithData.length === 0) return;
 
-    // Build a stable key from the sorted ZIP set to detect actual changes
-    const zipKey = zipsWithData.sort().join(',');
-    if (zipKey === prevZipKey.current) return;
-    prevZipKey.current = zipKey;
+    const mobile = window.innerWidth < 768;
+
+    // Build a stable key from the sorted ZIP set + panel state to detect changes
+    const fitKey = zipsWithData.sort().join(',') + (mobile ? `|panel=${mobilePanelOpen}` : '');
+    if (fitKey === prevFitKey.current) return;
+    prevFitKey.current = fitKey;
 
     const bounds = computeZipBounds(geojson, new Set(zipsWithData));
     if (!bounds) return;
 
-    const mobile = window.innerWidth < 768;
-
     // Padding accounts for UI overlays:
     // Desktop: filter bar top (~120px), charts left (~45%), stats right (~220px)
-    // Mobile: filter bar top (~180px), chart panel bottom (~320px)
+    // Mobile panel open: filter bar top (~200px), chart panel bottom (~340px)
+    // Mobile panel closed: filter bar top (~200px), collapse handle + safe area (~60px)
     const padding = mobile
-      ? { top: 200, bottom: 340, left: 20, right: 20 }
+      ? { top: 200, bottom: mobilePanelOpen ? 340 : 60, left: 20, right: 20 }
       : { top: 60, bottom: 50, left: Math.round(window.innerWidth * 0.60), right: 160 };
 
     map.fitBounds(
       [[bounds[0], bounds[1]], [bounds[2], bounds[3]]],
       { padding, duration: 800, maxZoom: 14 },
     );
-  }, [mapReady, geojson, zipCounts, allZipCounts]);
+  }, [mapReady, geojson, zipCounts, allZipCounts, mobilePanelOpen]);
 
   // Derive hover data from current state — always fresh, no stale values after clicks
   const hoveredZipStr = hoveredZip ? String(hoveredZip).padStart(5, '0') : null;
