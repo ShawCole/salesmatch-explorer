@@ -1,9 +1,11 @@
 import { useFilters } from '../../contexts/FilterContext';
 import { useAggregation } from '../../hooks/useAggregation';
+import { useRenderPerf } from '../../hooks/useRenderPerf';
 import { FloatingCard } from './FloatingCard';
 import { HorizontalBar } from '../charts/HorizontalBar';
 
 export function TopCitiesCard({ onClose, compact }: { onClose?: () => void; compact?: boolean }) {
+  useRenderPerf('TopCitiesCard');
   const { filteredRecords } = useFilters();
   const data = useAggregation(filteredRecords, 'PERSONAL_CITY', undefined, undefined, 10, true);
 

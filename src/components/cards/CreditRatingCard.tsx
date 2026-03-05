@@ -1,10 +1,12 @@
 import { useFilters } from '../../contexts/FilterContext';
 import { useAggregation } from '../../hooks/useAggregation';
+import { useRenderPerf } from '../../hooks/useRenderPerf';
 import { FloatingCard } from './FloatingCard';
 import { HorizontalBar } from '../charts/HorizontalBar';
 import { CREDIT_RATING_ORDER, CREDIT_RATING_LABELS } from '../../utils/constants';
 
 export function CreditRatingCard({ onClose, compact }: { onClose?: () => void; compact?: boolean }) {
+  useRenderPerf('CreditRatingCard');
   const { filteredRecords } = useFilters();
   const raw = useAggregation(
     filteredRecords,

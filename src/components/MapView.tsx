@@ -2,6 +2,7 @@ import { useRef, useCallback, useEffect, useState } from 'react';
 import Map, { Source, Layer, type MapRef, type MapLayerMouseEvent } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { useMobileFade } from '../hooks/useMobileTooltipDismiss';
+import { useRenderPerf } from '../hooks/useRenderPerf';
 import { useFilters } from '../contexts/FilterContext';
 import { useZipAggregation } from '../hooks/useZipAggregation';
 import { ZIP_TO_COUNTY } from '../utils/zipCounty';
@@ -51,6 +52,7 @@ function computeZipBounds(
 }
 
 export function MapView() {
+  useRenderPerf('MapView');
   const mapRef = useRef<MapRef>(null);
   const { filteredRecords, baseFilteredRecords, demographicFilteredRecords, allRecords, filters, dispatch } = useFilters();
   const zipCounts = useZipAggregation(filteredRecords);
@@ -62,7 +64,7 @@ export function MapView() {
   const [hoveredZip, setHoveredZip] = useState<string | null>(null);
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
   const { style: zipFadeStyle, resetFade: resetZipFade, isMobile } = useMobileFade();
-  const didInitialFit = useRef(false);
+
 
   // Load GeoJSON and assign stable IDs to each feature
   useEffect(() => {
@@ -83,6 +85,7 @@ export function MapView() {
     if (!map || !geojson) return;
     if (!map.getSource('zips') || !map.isSourceLoaded('zips')) return;
 
+    const t0 = import.meta.env.DEV ? performance.now() : 0;
     for (const feature of geojson.features) {
       const zipCode = feature.properties?.ZCTA5CE20 || feature.properties?.ZCTA5CE10 || feature.properties?.ZIP;
       if (zipCode) {
@@ -96,6 +99,9 @@ export function MapView() {
         );
       }
     }
+    if (import.meta.env.DEV) {
+      console.log(`[render] MapFeatureState: ${(performance.now() - t0).toFixed(1)}ms (${geojson.features.length} features)`);
+    }
   }, [zipCounts, allZipCounts, geojson]);
 
   // Re-apply when zipCounts or geojson change
@@ -104,7 +110,6 @@ export function MapView() {
   }, [applyFeatureStates]);
 
   // Also apply when the source finishes loading (handles race condition)
-  // and on map idle (catches cases where sourcedata fires before listener is attached)
   useEffect(() => {
     if (!mapReady) return;
     const map = mapRef.current?.getMap();
@@ -116,42 +121,38 @@ export function MapView() {
       }
     };
 
-    const onIdle = () => {
-      applyFeatureStates();
-    };
-
     map.on('sourcedata', onSourceData);
-    map.on('idle', onIdle);
     // Apply immediately in case source already loaded before listeners attached
     applyFeatureStates();
     return () => {
       map.off('sourcedata', onSourceData as any);
-      map.off('idle', onIdle);
     };
   }, [applyFeatureStates, mapReady]);
 
-  // Auto-zoom on initial load: fit map to ZIPs with data, accounting for UI overlays
+  // Auto-zoom whenever the visible ZIP set changes (including initial load)
+  const prevZipKey = useRef<string>('');
   useEffect(() => {
-    if (didInitialFit.current) return;
     if (!mapReady || !geojson || geojson.features.length === 0) return;
 
     const map = mapRef.current?.getMap();
     if (!map) return;
 
-    // Determine which ZIPs to fit: filtered data if URL had filters, otherwise all data
     const targetCounts = zipCounts.size > 0 ? zipCounts : allZipCounts;
     if (targetCounts.size === 0) return;
 
-    const zipsWithData = new Set<string>();
+    const zipsWithData: string[] = [];
     for (const [zip, count] of targetCounts) {
-      if (count > 0) zipsWithData.add(zip);
+      if (count > 0) zipsWithData.push(zip);
     }
-    if (zipsWithData.size === 0) return;
+    if (zipsWithData.length === 0) return;
 
-    const bounds = computeZipBounds(geojson, zipsWithData);
+    // Build a stable key from the sorted ZIP set to detect actual changes
+    const zipKey = zipsWithData.sort().join(',');
+    if (zipKey === prevZipKey.current) return;
+    prevZipKey.current = zipKey;
+
+    const bounds = computeZipBounds(geojson, new Set(zipsWithData));
     if (!bounds) return;
-
-    didInitialFit.current = true;
 
     const mobile = window.innerWidth < 768;
 

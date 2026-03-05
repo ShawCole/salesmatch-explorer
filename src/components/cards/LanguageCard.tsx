@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
 import { useFilters } from '../../contexts/FilterContext';
+import { useRenderPerf } from '../../hooks/useRenderPerf';
 import { FloatingCard } from './FloatingCard';
 import { LanguageDoughnut } from '../charts/LanguageDoughnut';
 import { LANGUAGE_CODE_LABELS } from '../../utils/constants';
@@ -48,6 +49,7 @@ function buildSegments(records: { SKIPTRACE_LANGUAGE_CODE: string }[]): LangSegm
 }
 
 export function LanguageCard({ onClose, compact }: { onClose?: () => void; compact?: boolean }) {
+  useRenderPerf('LanguageCard');
   const { filteredRecords, totalCount } = useFilters();
 
   const segments = useMemo(() => buildSegments(filteredRecords as any[]), [filteredRecords]);

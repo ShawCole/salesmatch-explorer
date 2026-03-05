@@ -1,12 +1,14 @@
 import { useMemo } from 'react';
 import { useFilters } from '../../contexts/FilterContext';
 import { useAggregation } from '../../hooks/useAggregation';
+import { useRenderPerf } from '../../hooks/useRenderPerf';
 import { FloatingCard } from './FloatingCard';
 import { BarChart } from '../charts/BarChart';
 import { HorizontalBar } from '../charts/HorizontalBar';
 import { INCOME_RANGE_ORDER, INCOME_RANGE_LABELS, INCOME_MOBILE_LABELS } from '../../utils/constants';
 
 export function IncomeCard({ onClose, compact }: { onClose?: () => void; compact?: boolean }) {
+  useRenderPerf('IncomeCard');
   const { filteredRecords } = useFilters();
   const labels = compact ? INCOME_MOBILE_LABELS : INCOME_RANGE_LABELS;
   const data = useAggregation(filteredRecords, 'INCOME_RANGE', INCOME_RANGE_ORDER, labels);

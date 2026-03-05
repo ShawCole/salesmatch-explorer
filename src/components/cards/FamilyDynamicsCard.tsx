@@ -1,8 +1,10 @@
 import { useFilters } from '../../contexts/FilterContext';
+import { useRenderPerf } from '../../hooks/useRenderPerf';
 import { FloatingCard } from './FloatingCard';
 import { FamilyDoughnut } from '../charts/FamilyDoughnut';
 
 export function FamilyDynamicsCard({ onClose, compact }: { onClose?: () => void; compact?: boolean }) {
+  useRenderPerf('FamilyDynamicsCard');
   const { filteredRecords } = useFilters();
 
   return (

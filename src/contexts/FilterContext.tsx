@@ -250,6 +250,27 @@ export function FilterProvider({ children }: { children: ReactNode }) {
     return result;
   }, [baseFilteredRecords, filters]);
 
+  // DEV: measure filter performance
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      const t0 = performance.now();
+      // Force a synchronous re-aggregate to measure cost
+      const filterPass = records.filter(r => {
+        if (filters.homeValueTabs.size > 0 && !filters.homeValueTabs.has(r.HOME_VALUE_TAB)) return false;
+        for (const [filterKey, field] of Object.entries(FIELD_MAP)) {
+          const mf = filters[filterKey as MultiSelectKey];
+          if (mf.include.size === 0 && mf.exclude.size === 0) continue;
+          let val = r[field] || '';
+          if (filterKey === 'city') val = val.toLowerCase().split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+          if (!applyMultiFilter(mf, val)) return false;
+        }
+        return true;
+      });
+      const t1 = performance.now();
+      console.log(`[perf] Filter: ${(t1-t0).toFixed(1)}ms → ${filterPass.length} records (from ${records.length})`);
+    }
+  }, [filters]);
+
   const value = useMemo(() => ({
     filters,
     filteredRecords,

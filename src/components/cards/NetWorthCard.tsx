@@ -1,12 +1,14 @@
 import { useMemo } from 'react';
 import { useFilters } from '../../contexts/FilterContext';
 import { useAggregation } from '../../hooks/useAggregation';
+import { useRenderPerf } from '../../hooks/useRenderPerf';
 import { FloatingCard } from './FloatingCard';
 import { BarChart } from '../charts/BarChart';
 import { HorizontalBar } from '../charts/HorizontalBar';
 import { NET_WORTH_ORDER, NET_WORTH_LABELS, NET_WORTH_MOBILE_LABELS } from '../../utils/constants';
 
 export function NetWorthCard({ onClose, compact }: { onClose?: () => void; compact?: boolean }) {
+  useRenderPerf('NetWorthCard');
   const { filteredRecords } = useFilters();
   const labels = compact ? NET_WORTH_MOBILE_LABELS : NET_WORTH_LABELS;
   const data = useAggregation(filteredRecords, 'NET_WORTH', NET_WORTH_ORDER, labels);

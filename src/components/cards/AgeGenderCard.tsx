@@ -1,11 +1,13 @@
 import { useMemo } from 'react';
 import { useFilters } from '../../contexts/FilterContext';
+import { useRenderPerf } from '../../hooks/useRenderPerf';
 import { FloatingCard } from './FloatingCard';
 import { PopulationPyramid } from '../charts/PopulationPyramid';
 import { buildPyramid } from '../../utils/aggregation';
 import { AGE_RANGE_ORDER } from '../../utils/constants';
 
 export function AgeGenderCard({ onClose, compact }: { onClose?: () => void; compact?: boolean }) {
+  useRenderPerf('AgeGenderCard');
   const { filteredRecords } = useFilters();
   const data = useMemo(
     () => buildPyramid(filteredRecords, AGE_RANGE_ORDER),
