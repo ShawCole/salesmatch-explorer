@@ -478,6 +478,14 @@ export function FilterBar({ onCollapseChange }: { onCollapseChange?: (collapsed:
             onToggle={handleToggle('seniorityLevel')}
             onClear={handleClear('seniorityLevel')}
           />
+          <MultiSelectPopover
+            label="Homeowner"
+            options={['Y', 'N']}
+            labelMap={{ Y: 'Yes', N: 'No' }}
+            filter={filters.homeowner}
+            onToggle={handleToggle('homeowner')}
+            onClear={handleClear('homeowner')}
+          />
         </div>
         </div>{/* end collapsible */}
 

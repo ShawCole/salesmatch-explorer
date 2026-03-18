@@ -8,6 +8,7 @@ const PARAM_MAP = {
   netWorth: 'nw',
   creditRating: 'credit',
   seniorityLevel: 'seniority',
+  homeowner: 'homeowner',
   city: 'city',
   county: 'county',
   language: 'lang',
@@ -25,6 +26,7 @@ type FilterState = {
   netWorth: MultiSelectFilter;
   creditRating: MultiSelectFilter;
   seniorityLevel: MultiSelectFilter;
+  homeowner: MultiSelectFilter;
   city: MultiSelectFilter;
   county: MultiSelectFilter;
   language: MultiSelectFilter;
@@ -35,7 +37,7 @@ type FilterState = {
 
 const MULTI_SELECT_KEYS = [
   'intent', 'ageRange', 'gender', 'incomeRange', 'netWorth',
-  'creditRating', 'seniorityLevel', 'city', 'county', 'language', 'state',
+  'creditRating', 'seniorityLevel', 'homeowner', 'city', 'county', 'language', 'state',
 ] as const;
 
 function encodeSet(s: Set<string>): string {
@@ -93,6 +95,7 @@ export function searchParamsToFilters(search: string): FilterState | null {
     netWorth: emptyFilter(),
     creditRating: emptyFilter(),
     seniorityLevel: emptyFilter(),
+    homeowner: emptyFilter(),
     city: emptyFilter(),
     county: emptyFilter(),
     language: emptyFilter(),

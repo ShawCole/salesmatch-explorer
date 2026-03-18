@@ -13,6 +13,7 @@ interface FilterState {
   netWorth: MultiSelectFilter;
   creditRating: MultiSelectFilter;
   seniorityLevel: MultiSelectFilter;
+  homeowner: MultiSelectFilter;
   city: MultiSelectFilter;
   county: MultiSelectFilter;
   language: MultiSelectFilter;
@@ -29,6 +30,7 @@ const PARAM_MAP: Record<string, string> = {
   netWorth: 'nw',
   creditRating: 'credit',
   seniorityLevel: 'seniority',
+  homeowner: 'homeowner',
   city: 'city',
   county: 'county',
   language: 'lang',
