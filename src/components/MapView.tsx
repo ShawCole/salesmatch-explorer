@@ -105,8 +105,10 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
   const { style: fadeStyle, resetFade } = useMobileFade();
   const prevCountyIds = useRef<Set<string>>(new Set());
   const prevZipIds = useRef<Set<string>>(new Set());
+  const prevFitKey = useRef<string>('');
+  const skipNextFit = useRef(false);
 
-  // County/ZIP data lookup maps
+  // County/ZIP data lookup maps (for map coloring — geo-filtered)
   const countyMap = useMemo(() => {
     const m = new globalThis.Map<string, GeoCounty>();
     if (apiData?.geo.counties) {
@@ -122,6 +124,22 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
     }
     return m;
   }, [apiData?.geo.zips]);
+
+  // Tooltip lookup maps — use tooltipGeo (demographic-only counts) when available,
+  // so hovering over geo-excluded areas still shows accurate counts
+  const tipCountyMap = useMemo(() => {
+    const src = apiData?.tooltipGeo?.counties ?? apiData?.geo.counties;
+    const m = new globalThis.Map<string, GeoCounty>();
+    if (src) { for (const c of src) m.set(c.fips, c); }
+    return m;
+  }, [apiData?.tooltipGeo?.counties, apiData?.geo.counties]);
+
+  const tipZipMap = useMemo(() => {
+    const src = apiData?.tooltipGeo?.zips ?? apiData?.geo.zips;
+    const m = new globalThis.Map<string, GeoZip>();
+    if (src) { for (const z of src) m.set(z.zip, z); }
+    return m;
+  }, [apiData?.tooltipGeo?.zips, apiData?.geo.zips]);
 
   // Initialize map
   useEffect(() => {
@@ -332,17 +350,6 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
   }, []);
 
   // Build county→zips lookup for viewport normalization
-  const zipsByCounty = useMemo(() => {
-    const m = new globalThis.Map<string, GeoZip[]>();
-    if (apiData?.geo.zips) {
-      for (const z of apiData.geo.zips) {
-        const arr = m.get(z.county_fips);
-        if (arr) arr.push(z); else m.set(z.county_fips, [z]);
-      }
-    }
-    return m;
-  }, [apiData?.geo.zips]);
-
   // Ref to hold the latest normalization function so moveend can call it
   const applyZipDensity = useRef<() => void>(() => {});
 
@@ -487,6 +494,96 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
     return () => { map.off('moveend', onMoveEnd); };
   }, [mapReady]);
 
+  // Auto-zoom to fit filtered geo data on load and filter changes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady || !apiData) return;
+
+    // Determine if any geo filters are active
+    const hasGeoFilter =
+      filters.state.include.size > 0 || filters.state.exclude.size > 0 ||
+      filters.county.include.size > 0 || filters.county.exclude.size > 0 ||
+      filters.city.include.size > 0 || filters.city.exclude.size > 0 ||
+      filters.selectedZips.size > 0 || filters.excludedZips.size > 0;
+
+    if (!hasGeoFilter) {
+      // No geo filters — reset to national if we were previously zoomed
+      if (prevFitKey.current !== '') {
+        prevFitKey.current = '';
+        map.flyTo({ center: [INITIAL_VIEW.lng, INITIAL_VIEW.lat], zoom: INITIAL_VIEW.zoom, duration: 800 });
+      }
+      return;
+    }
+
+    // Build a stable key from the filtered geo zips to detect changes
+    const geoZips = apiData.geo.zips;
+    const fitKey = geoZips.map(z => z.zip).sort().join(',');
+
+    if (fitKey === prevFitKey.current) return;
+
+    // Check skip flag (user clicked a ZIP — don't refit)
+    if (skipNextFit.current) {
+      skipNextFit.current = false;
+      prevFitKey.current = fitKey;
+      return;
+    }
+
+    prevFitKey.current = fitKey;
+
+    if (geoZips.length === 0) return;
+
+    // Compute bounds from all relevant geo areas:
+    // - County includes: full county extent from tooltipGeo
+    // - State includes: full state extent from tooltipGeo
+    // - Selected ZIPs: include their coords too (may be outside county/state)
+    // Falls back to geo-filtered zips when no tooltipGeo available.
+    let boundsZips = geoZips;
+    const tipZips = apiData.tooltipGeo?.zips;
+    if (tipZips) {
+      const parts: typeof tipZips = [];
+      if (filters.county.include.size > 0) {
+        const countyFips = filters.county.include;
+        parts.push(...tipZips.filter(z => countyFips.has(z.county_fips)));
+      }
+      if (filters.state.include.size > 0) {
+        const states = filters.state.include;
+        parts.push(...tipZips.filter(z => states.has(z.state)));
+      }
+      if (filters.selectedZips.size > 0) {
+        const selectedSet = filters.selectedZips;
+        parts.push(...tipZips.filter(z => selectedSet.has(z.zip)));
+      }
+      if (parts.length > 0) boundsZips = parts;
+    } else if (filters.selectedZips.size > 0) {
+      // No tooltipGeo but selected zips — include them from geoZips
+      const selectedSet = filters.selectedZips;
+      const extraZips = geoZips.filter(z => selectedSet.has(z.zip));
+      if (extraZips.length > 0) boundsZips = [...geoZips, ...extraZips];
+    }
+
+    // Compute bounds from ZIP lat/lng
+    const bounds = new maplibregl.LngLatBounds();
+    let hasCoords = false;
+    for (const z of boundsZips) {
+      if (z.lat != null && z.lng != null) {
+        bounds.extend([z.lng, z.lat]);
+        hasCoords = true;
+      }
+    }
+
+    if (!hasCoords) return;
+
+    const isMobile = window.innerWidth < 768;
+    map.fitBounds(bounds, {
+      padding: isMobile
+        ? { top: 80, bottom: mobilePanelOpen ? 340 : 60, left: 20, right: 20 }
+        : { top: 100, bottom: 80, left: 360, right: 80 },
+      duration: 800,
+      maxZoom: 12,
+    });
+  }, [mapReady, apiData, filters.state, filters.county, filters.city,
+      filters.selectedZips, filters.excludedZips, mobilePanelOpen]);
+
   // Apply selected/excluded ZIP visual states
   const prevSelectedRef = useRef<Set<string>>(new Set());
   const prevExcludedRef = useRef<Set<string>>(new Set());
@@ -531,7 +628,7 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
           const f = zctaFeatures[0];
           const zip = f.properties?.GEOID20;
           if (zip) {
-            const data = zipMap.get(zip);
+            const data = tipZipMap.get(zip);
             setHoveredFeature({
               name: `ZIP ${zip}`,
               count: data?.total || 0,
@@ -553,7 +650,7 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
           const fips = f.properties?.GEOID;
           const name = f.properties?.NAME;
           if (fips) {
-            const data = countyMap.get(fips);
+            const data = tipCountyMap.get(fips);
             setHoveredFeature({
               name: `${name || fips} County`,
               count: data?.total || 0,
@@ -582,15 +679,32 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
       const zoom = map.getZoom();
       const point = e.point;
 
-      // ZIP click — select or exclude
+      // ZIP click — toggle in/out of dataset
+      // In selectedZips → remove (undo rescue)
+      // In excludedZips → remove (undo exclude)
+      // Currently in dataset (colored) → exclude it
+      // Currently out of dataset (not colored) → include it
       if (zoom >= 9) {
         const zctaFeatures = map.queryRenderedFeatures(point, { layers: ['zcta-fill'] });
         if (zctaFeatures.length > 0) {
           const zip = zctaFeatures[0].properties?.GEOID20;
           if (zip) {
-            if (e.originalEvent.shiftKey) {
+            skipNextFit.current = true;
+            const isSelected = filters.selectedZips.has(zip);
+            const isExcluded = filters.excludedZips.has(zip);
+            const isInDataset = zipMap.has(zip) && (zipMap.get(zip)?.total ?? 0) > 0;
+
+            if (isSelected) {
+              // Undo the rescue/include
+              dispatch({ type: 'TOGGLE_ZIP', zip });
+            } else if (isExcluded) {
+              // Undo the exclude
+              dispatch({ type: 'TOGGLE_EXCLUDE_ZIP', zip });
+            } else if (isInDataset) {
+              // It's in → take it out
               dispatch({ type: 'TOGGLE_EXCLUDE_ZIP', zip });
             } else {
+              // It's out → bring it in
               dispatch({ type: 'TOGGLE_ZIP', zip });
             }
             return;
@@ -645,7 +759,7 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
       window.removeEventListener('card-hover-start', clearHandler);
       window.removeEventListener('chart-panel-enter', clearHandler);
     };
-  }, [mapReady, countyMap, zipMap, resetFade, dispatch]);
+  }, [mapReady, countyMap, zipMap, tipCountyMap, tipZipMap, resetFade, dispatch]);
 
   return (
     <div className="absolute inset-0">

@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useMemo, useEffect, useRef, useCallback, useState, type ReactNode } from 'react';
+import { createContext, useContext, useReducer, useMemo, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { MultiSelectFilter } from '../types/record';
 import type { DashboardResponse } from '../types/dashboard';
 import { fetchDashboard } from '../utils/apiClient';
