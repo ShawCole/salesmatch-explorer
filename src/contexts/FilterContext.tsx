@@ -195,10 +195,9 @@ export function FilterProvider({ children }: { children: ReactNode }) {
           }
         })
         .catch(err => {
-          if (err.name !== 'AbortError') {
-            console.error('Dashboard fetch failed:', err);
-            setLoading(false);
-          }
+          if (err.name === 'AbortError' || controller.signal.aborted) return;
+          console.error('Dashboard fetch failed:', err);
+          setLoading(false);
         });
     };
 

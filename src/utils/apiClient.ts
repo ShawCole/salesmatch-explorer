@@ -44,13 +44,13 @@ export function filtersToQueryParams(filters: FilterState): string {
   for (const [key, param] of Object.entries(PARAM_MAP)) {
     const f = filters[key as keyof FilterState] as MultiSelectFilter | undefined;
     if (!f || typeof f !== 'object' || !('include' in f)) continue;
-    if (f.include.size > 0) params.set(param, [...f.include].join(','));
-    if (f.exclude.size > 0) params.set(param + '_x', [...f.exclude].join(','));
+    if (f.include.size > 0) params.set(param, [...f.include].join('|'));
+    if (f.exclude.size > 0) params.set(param + '_x', [...f.exclude].join('|'));
   }
 
   // ZIP selections (hierarchical override — see backend buildDashboardWhere)
-  if (filters.selectedZips.size > 0) params.set('zips', [...filters.selectedZips].join(','));
-  if (filters.excludedZips.size > 0) params.set('xzips', [...filters.excludedZips].join(','));
+  if (filters.selectedZips.size > 0) params.set('zips', [...filters.selectedZips].join('|'));
+  if (filters.excludedZips.size > 0) params.set('xzips', [...filters.excludedZips].join('|'));
 
   return params.toString();
 }

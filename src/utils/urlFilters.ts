@@ -40,13 +40,14 @@ const MULTI_SELECT_KEYS = [
   'creditRating', 'seniorityLevel', 'homeowner', 'city', 'county', 'language', 'state',
 ] as const;
 
+// Use pipe delimiter — commas appear inside income/net-worth values
 function encodeSet(s: Set<string>): string {
-  return [...s].join(',');
+  return [...s].join('|');
 }
 
 function decodeSet(v: string | null): Set<string> {
   if (!v) return new Set();
-  return new Set(v.split(',').filter(Boolean));
+  return new Set(v.split('|').filter(Boolean));
 }
 
 export function filtersToSearchParams(filters: FilterState): string {

@@ -25,6 +25,7 @@ function ensureProtocol() {
 const DARK_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   name: 'Dark',
+  glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
   sources: {
     'osm-tiles': {
       type: 'raster',
@@ -321,6 +322,7 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
       });
 
       // Excluded ZIP overlay — dimmed red outline + darkened fill
+      // Zoom expression must be top-level; multiply zoom ramp by excluded flag
       map.addLayer({
         id: 'zcta-excluded-fill',
         type: 'fill',
@@ -329,9 +331,10 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
         minzoom: 6,
         paint: {
           'fill-color': 'rgba(0,0,0,0.6)',
-          'fill-opacity': ['case', ['==', ['coalesce', ['feature-state', 'excluded'], 0], 1],
-            ['interpolate', ['linear'], ['zoom'], 6, 0, 8, 0.6] as any,
-            0,
+          'fill-opacity': [
+            'interpolate', ['linear'], ['zoom'],
+            6, 0,
+            8, ['case', ['==', ['coalesce', ['feature-state', 'excluded'], 0], 1], 0.6, 0],
           ] as any,
         },
       });
