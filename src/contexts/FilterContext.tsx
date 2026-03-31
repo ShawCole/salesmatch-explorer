@@ -178,9 +178,9 @@ export function FilterProvider({ children }: { children: ReactNode }) {
     if (cached) {
       rawRecords.current = cached;
       setLoading(true);
-      // Use requestAnimationFrame to show loading spinner before heavy aggregation
       requestAnimationFrame(() => {
         const result = aggregateRecords(cached, filters);
+        lastFilterKey.current = serializeFilters(filters);
         setApiData(result);
         setLoading(false);
       });
@@ -194,6 +194,7 @@ export function FilterProvider({ children }: { children: ReactNode }) {
         recordCache.current[dataset] = records;
         rawRecords.current = records;
         const result = aggregateRecords(records, filters);
+        lastFilterKey.current = serializeFilters(filters);
         setApiData(result);
         setLoading(false);
       })
@@ -203,25 +204,35 @@ export function FilterProvider({ children }: { children: ReactNode }) {
       });
   }, [dataset]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Re-aggregate when filters change
+  // Re-aggregate when filters change (but NOT on initial mount — dataset effect handles that)
   const filterKey = serializeFilters(filters);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const filtersRef = useRef(filters);
   filtersRef.current = filters;
+  const lastFilterKey = useRef<string>(filterKey);
+  const initialMount = useRef(true);
 
   useEffect(() => {
+    // Skip initial mount — the dataset effect already set apiData
+    if (initialMount.current) {
+      initialMount.current = false;
+      return;
+    }
+
+    // Skip if filterKey hasn't actually changed (e.g. React strict mode double-fire)
+    if (filterKey === lastFilterKey.current) return;
+    lastFilterKey.current = filterKey;
+
     if (rawRecords.current.length === 0) return;
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     setLoading(true);
     debounceRef.current = setTimeout(() => {
-      // Use rAF to guarantee spinner paints before heavy aggregation blocks
       requestAnimationFrame(() => {
         const start = performance.now();
         const result = aggregateRecords(rawRecords.current, filtersRef.current);
         const elapsed = performance.now() - start;
-        // Ensure spinner shows for at least 300ms total
         const remaining = Math.max(0, 300 - elapsed);
         setTimeout(() => {
           setApiData(result);
