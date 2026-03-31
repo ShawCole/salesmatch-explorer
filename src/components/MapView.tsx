@@ -222,6 +222,7 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
           'fill-color': FILL_COLOR as any,
           'fill-opacity': [
             'interpolate', ['linear'], ['zoom'],
+            0, 0.7,
             6, 0.7,
             8, 0,
           ] as any,
@@ -241,6 +242,7 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
           ] as any,
           'line-opacity': [
             'interpolate', ['linear'], ['zoom'],
+            0, 1,
             6, 1,
             8, 0,
           ] as any,
@@ -429,8 +431,11 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
         for (const z of visibleZips) { if (z.total > localMax) localMax = z.total; }
         const norm = localMax > 0 ? 100 / localMax : 0;
 
-        // Apply normalized density to all zips
-        for (const z of allZips) {
+        // Clear all ZIP feature-state first, then only set visible ones
+        try { map.removeFeatureState({ source: 'zctas', sourceLayer: 'zctas' }); } catch { /* */ }
+
+        // Apply density only to visible viewport ZIPs (+ pad)
+        for (const z of visibleZips) {
           try {
             map.setFeatureState(
               { source: 'zctas', sourceLayer: 'zctas', id: z.zip },
@@ -439,16 +444,8 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
           } catch { /* */ }
         }
       } else {
-        // Below zip zoom: use global normalization
-        const norm = globalMaxZip > 0 ? 100 / globalMaxZip : 0;
-        for (const z of allZips) {
-          try {
-            map.setFeatureState(
-              { source: 'zctas', sourceLayer: 'zctas', id: z.zip },
-              { density: z.total * norm }
-            );
-          } catch { /* */ }
-        }
+        // Below zip zoom: clear all — ZIPs aren't visible yet
+        try { map.removeFeatureState({ source: 'zctas', sourceLayer: 'zctas' }); } catch { /* */ }
       }
     };
 
