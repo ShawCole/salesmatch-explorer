@@ -1,8 +1,7 @@
 import { useMemo, useCallback, useState } from 'react';
 import { useFilters } from '../contexts/FilterContext';
-import { exportUrl } from '../utils/apiClient';
 import { buildShareURL } from '../utils/urlFilters';
-import { MapPin, Download, Link, Check } from 'lucide-react';
+import { MapPin, Link, Check } from 'lucide-react';
 
 function describeArea(
   filters: {
@@ -66,10 +65,6 @@ export function StatsBar({ hideExport }: { hideExport?: boolean } = {}) {
     return map;
   }, [apiData?.filterOptions?.counties]);
 
-  const handleExport = useCallback(() => {
-    window.open(exportUrl(filters), '_blank');
-  }, [filters]);
-
   const handleCopyLink = useCallback(() => {
     const url = buildShareURL(filters);
     navigator.clipboard.writeText(url);
@@ -106,22 +101,16 @@ export function StatsBar({ hideExport }: { hideExport?: boolean } = {}) {
           </div>
         </div>
 
-        {/* Export + Copy Link */}
+        {/* Copy Link */}
         {!hideExport && (
           <div className="flex gap-1.5">
             <button
-              onClick={handleExport}
-              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-purple-600/30 hover:bg-purple-600/50 border border-purple-400/20 text-purple-200 text-[11px] font-medium transition-colors"
-            >
-              <Download size={12} />
-              Export
-            </button>
-            <button
               onClick={handleCopyLink}
-              className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg bg-purple-600/30 hover:bg-purple-600/50 border border-purple-400/20 text-purple-200 text-[11px] font-medium transition-colors"
+              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-purple-600/30 hover:bg-purple-600/50 border border-purple-400/20 text-purple-200 text-[11px] font-medium transition-colors"
               title="Copy shareable link with current filters"
             >
               {linkCopied ? <Check size={12} className="text-green-400" /> : <Link size={12} />}
+              {linkCopied ? 'Copied' : 'Share Link'}
             </button>
           </div>
         )}

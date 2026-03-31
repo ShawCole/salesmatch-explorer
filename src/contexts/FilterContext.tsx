@@ -1,7 +1,6 @@
-import { createContext, useContext, useReducer, useMemo, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useReducer, useMemo, useEffect, useRef, useState, useCallback, type ReactNode } from 'react';
 import type { MultiSelectFilter } from '../types/record';
 import type { DashboardResponse } from '../types/dashboard';
-import { fetchDashboard } from '../utils/apiClient';
 import { searchParamsToFilters, syncFiltersToURL } from '../utils/urlFilters';
 
 function emptyFilter(): MultiSelectFilter {
@@ -40,7 +39,16 @@ type Action =
   | { type: 'CLEAR_EXCLUDED_ZIPS' }
   | { type: 'CLEAR_ALL' };
 
-const DEFAULT_TOPIC = 'wealth-management-services';
+const DEFAULT_TOPIC = 'sales_revenue';
+
+export type DatasetKey = 'sales_revenue' | 'sales_headcount' | 'csm_revenue' | 'csm_headcount';
+
+const DATASET_URLS: Record<DatasetKey, string> = {
+  sales_revenue: '/datasets/sales_revenue.json',
+  sales_headcount: '/datasets/sales_headcount.json',
+  csm_revenue: '/datasets/csm_revenue.json',
+  csm_headcount: '/datasets/csm_headcount.json',
+};
 
 function buildEmptyState(): FilterState {
   return {
@@ -137,6 +145,8 @@ interface FilterContextValue {
   loading: boolean;
   dispatch: React.Dispatch<Action>;
   topics: Topic[];
+  dataset: DatasetKey;
+  setDataset: (key: DatasetKey) => void;
 }
 
 const FilterContext = createContext<FilterContextValue>(null!);
@@ -144,82 +154,107 @@ const FilterContext = createContext<FilterContextValue>(null!);
 export function FilterProvider({ children }: { children: ReactNode }) {
   const [filters, dispatch] = useReducer(reducer, initialState);
   const [apiData, setApiData] = useState<DashboardResponse | null>(null);
+  const [fullData, setFullData] = useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [topics, setTopics] = useState<Topic[]>([]);
-  const abortRef = useRef<AbortController | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [dataset, setDatasetRaw] = useState<DatasetKey>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return (params.get('dataset') as DatasetKey) || 'sales_revenue';
+  });
+  const topics: Topic[] = [];
+  const cache = useRef<Partial<Record<DatasetKey, DashboardResponse>>>({});
 
-  // Fetch available topics on mount
-  useEffect(() => {
-    const API_BASE = import.meta.env.VITE_API_URL || '';
-    const API_KEY = import.meta.env.VITE_API_KEY || '';
-    const headers: Record<string, string> = {};
-    if (API_KEY) headers['x-api-key'] = API_KEY;
-    fetch(`${API_BASE}/api/topics`, { headers })
-      .then(r => r.json())
-      .then((data: Topic[]) => {
-        // Filter out "unknown" and topics with 0 signals
-        setTopics(data.filter(t => t.topic_slug !== 'unknown' && Number(t.signal_count) > 0));
-      })
-      .catch(err => console.error('Failed to fetch topics:', err));
+  const setDataset = useCallback((key: DatasetKey) => {
+    setDatasetRaw(key);
+    // Reset filters when switching dataset
+    dispatch({ type: 'CLEAR_ALL' });
+    // Update URL
+    const url = new URL(window.location.href);
+    url.searchParams.set('dataset', key);
+    window.history.replaceState({}, '', url.toString());
   }, []);
 
-  // Stable serialized key — only changes when filter *values* actually change
+  // Load static JSON when dataset changes
+  useEffect(() => {
+    const cached = cache.current[dataset];
+    if (cached) {
+      setFullData(cached);
+      setApiData(cached);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    fetch(DATASET_URLS[dataset])
+      .then(r => r.json())
+      .then((data: DashboardResponse) => {
+        cache.current[dataset] = data;
+        setFullData(data);
+        setApiData(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to load dataset:', err);
+        setLoading(false);
+      });
+  }, [dataset]);
+
+  // Client-side filtering when filters change
   const filterKey = serializeFilters(filters);
-  // Keep a ref to the latest filters so the fetch always reads current state
-  const filtersRef = useRef(filters);
-  filtersRef.current = filters;
+
+  useEffect(() => {
+    if (!fullData) return;
+
+    // Check if any filters are active
+    const hasFilters = filters.state.include.size > 0 || filters.state.exclude.size > 0 ||
+      filters.city.include.size > 0 || filters.ageRange.include.size > 0 ||
+      filters.gender.include.size > 0 || filters.incomeRange.include.size > 0 ||
+      filters.netWorth.include.size > 0 || filters.creditRating.include.size > 0 ||
+      filters.seniorityLevel.include.size > 0 || filters.homeowner.include.size > 0 ||
+      filters.language.include.size > 0 || filters.selectedZips.size > 0 ||
+      filters.excludedZips.size > 0;
+
+    if (!hasFilters) {
+      setApiData(fullData);
+      return;
+    }
+
+    // Apply geo filters client-side (state, city, zip)
+    let filteredCounties = fullData.geo.counties;
+    let filteredZips = fullData.geo.zips;
+
+    if (filters.state.include.size > 0) {
+      const states = filters.state.include;
+      filteredCounties = filteredCounties.filter(c => states.has(c.state));
+      filteredZips = filteredZips.filter(z => states.has(z.state));
+    }
+    if (filters.state.exclude.size > 0) {
+      const states = filters.state.exclude;
+      filteredCounties = filteredCounties.filter(c => !states.has(c.state));
+      filteredZips = filteredZips.filter(z => !states.has(z.state));
+    }
+    if (filters.selectedZips.size > 0) {
+      filteredZips = filteredZips.filter(z => filters.selectedZips.has(z.zip));
+      const zipFips = new Set(filteredZips.map(z => z.county_fips));
+      filteredCounties = filteredCounties.filter(c => zipFips.has(c.fips));
+    }
+    if (filters.excludedZips.size > 0) {
+      filteredZips = filteredZips.filter(z => !filters.excludedZips.has(z.zip));
+    }
+
+    const filteredTotal = filteredZips.reduce((sum, z) => sum + z.total, 0) || fullData.filteredContacts;
+
+    setApiData({
+      ...fullData,
+      filteredContacts: filteredTotal,
+      geo: { counties: filteredCounties, zips: filteredZips },
+      tooltipGeo: { counties: fullData.geo.counties, zips: fullData.geo.zips },
+    });
+  }, [filterKey, fullData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync filter state → URL bar
   useEffect(() => {
     syncFiltersToURL(filters);
   }, [filterKey]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Fetch dashboard data when filters change (debounced)
-  useEffect(() => {
-    // Cancel any pending debounce
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-
-    const doFetch = () => {
-      // Abort previous in-flight request
-      if (abortRef.current) abortRef.current.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
-
-      setLoading(true);
-      fetchDashboard(filtersRef.current, controller.signal)
-        .then(data => {
-          if (!controller.signal.aborted) {
-            setApiData(data);
-            setLoading(false);
-          }
-        })
-        .catch(err => {
-          if (err.name === 'AbortError' || controller.signal.aborted) return;
-          console.error('Dashboard fetch failed:', err);
-          setLoading(false);
-        });
-    };
-
-    // First load: fetch immediately. Subsequent: debounce 300ms.
-    if (!apiData) {
-      doFetch();
-    } else {
-      debounceRef.current = setTimeout(doFetch, 300);
-    }
-
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [filterKey]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Cleanup abort on unmount — but DON'T abort, let the request finish
-  // so strict-mode remount can pick up the result
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
 
   const value = useMemo(() => ({
     filters,
@@ -227,7 +262,9 @@ export function FilterProvider({ children }: { children: ReactNode }) {
     loading,
     dispatch,
     topics,
-  }), [filters, apiData, loading, topics]);
+    dataset,
+    setDataset,
+  }), [filters, apiData, loading, topics, dataset, setDataset]);
 
   return (
     <FilterContext.Provider value={value}>

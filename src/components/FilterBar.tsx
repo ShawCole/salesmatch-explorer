@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
-import { useFilters, type MultiSelectKey } from '../contexts/FilterContext';
-import { INTENT_ORDER, INTENT_LABELS, AGE_RANGE_ORDER, AGE_RANGE_LABELS, GENDER_ORDER, INCOME_RANGE_ORDER, INCOME_RANGE_LABELS, NET_WORTH_ORDER, NET_WORTH_LABELS, CREDIT_RATING_ORDER, CREDIT_RATING_LABELS, SENIORITY_ORDER, SENIORITY_LABELS, LANGUAGE_CODE_LABELS } from '../utils/constants';
+import { useFilters, type MultiSelectKey, type DatasetKey } from '../contexts/FilterContext';
+import { AGE_RANGE_ORDER, AGE_RANGE_LABELS, GENDER_ORDER, INCOME_RANGE_ORDER, INCOME_RANGE_LABELS, NET_WORTH_ORDER, NET_WORTH_LABELS, CREDIT_RATING_ORDER, CREDIT_RATING_LABELS, SENIORITY_ORDER, SENIORITY_LABELS, LANGUAGE_CODE_LABELS } from '../utils/constants';
 import { X, Copy, Check, ChevronDown } from 'lucide-react';
 import { MultiSelectPopover } from './MultiSelectPopover';
 
@@ -97,20 +97,17 @@ function ZipChipGroup({
   );
 }
 
-function toTitleCase(s: string): string {
-  return s
-    .toLowerCase()
-    .split(' ')
-    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
-}
-
 const MOBILE_BP = 768;
 
 export function FilterBar({ onCollapseChange }: { onCollapseChange?: (collapsed: boolean) => void } = {}) {
-  const { filters, apiData, dispatch, topics } = useFilters();
+  const { filters, apiData, dispatch, dataset, setDataset } = useFilters();
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BP);
   const [filtersOpen, setFiltersOpen] = useState(true);
+
+  const offer = dataset.startsWith('csm') ? 'csm' : 'sales';
+  const sizing = dataset.endsWith('headcount') ? 'headcount' : 'revenue';
+  const handleOfferChange = (v: string) => setDataset(`${v}_${sizing}` as DatasetKey);
+  const handleSizingChange = (v: string) => setDataset(`${offer}_${v}` as DatasetKey);
 
   useEffect(() => {
     onCollapseChange?.(!filtersOpen);
@@ -220,28 +217,6 @@ export function FilterBar({ onCollapseChange }: { onCollapseChange?: (collapsed:
     return rangeLabels.join(', ');
   };
 
-  // Intent chip
-  {
-    const f = filters.intent;
-    const total = f.include.size + f.exclude.size;
-    if (total > 0) {
-      const parts: string[] = [];
-      if (f.include.size > 0) {
-        if (f.include.size <= 2) {
-          const names = [...f.include].map(v => INTENT_LABELS[v] ?? v);
-          parts.push(names.join(', '));
-        } else {
-          parts.push(`${f.include.size} incl`);
-        }
-      }
-      if (f.exclude.size > 0) parts.push(`${f.exclude.size} excl`);
-      activeFilters.push({
-        label: `Intent: ${parts.join(', ')}`,
-        clear: () => dispatch({ type: 'CLEAR_MULTI_SELECT', key: 'intent' }),
-      });
-    }
-  }
-
   // Range-merge configs
   const rangeMergeConfigs: { key: MultiSelectKey; label: string; order: string[]; labelMap: Record<string, string> }[] = [
     { key: 'incomeRange', label: 'Income', order: INCOME_RANGE_ORDER, labelMap: INCOME_RANGE_LABELS },
@@ -318,20 +293,7 @@ export function FilterBar({ onCollapseChange }: { onCollapseChange?: (collapsed:
     dispatch({ type: 'CLEAR_MULTI_SELECT', key });
   };
 
-  const topicDisplay = toTitleCase(filters.topic.replace(/-/g, ' '));
-  const [topicOpen, setTopicOpen] = useState(false);
-  const topicRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!topicOpen) return;
-    function handleClick(e: MouseEvent) {
-      if (topicRef.current && !topicRef.current.contains(e.target as Node)) {
-        setTopicOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [topicOpen]);
+  void filters.topic; // keep TS happy
 
   return (
     <div
@@ -339,47 +301,29 @@ export function FilterBar({ onCollapseChange }: { onCollapseChange?: (collapsed:
       onMouseEnter={() => window.dispatchEvent(new Event('card-hover-start'))}
     >
       <div className="glass rounded-xl p-3 max-w-[calc(100vw-24px)] mx-auto">
-        {/* Title + collapse toggle */}
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <h1 className="text-white font-bold text-lg leading-tight">
-            {topics.length > 1 ? (
-              <div ref={topicRef} className="relative inline-block">
-                <button
-                  onClick={() => setTopicOpen(!topicOpen)}
-                  className="text-purple-400 hover:text-purple-300 transition-colors inline-flex items-center gap-1"
-                >
-                  {topicDisplay}
-                  <ChevronDown size={14} className={`transition-transform duration-200 ${topicOpen ? 'rotate-180' : ''}`} />
-                </button>
-                {topicOpen && (
-                  <div className="absolute top-full left-0 mt-1 z-50 min-w-[240px] rounded-xl border border-white/10 bg-gray-900/95 backdrop-blur-xl shadow-2xl py-1">
-                    {topics.map(t => (
-                      <button
-                        key={t.topic_slug}
-                        onClick={() => {
-                          dispatch({ type: 'SET_TOPIC', topic: t.topic_slug });
-                          setTopicOpen(false);
-                        }}
-                        className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center justify-between ${
-                          t.topic_slug === filters.topic
-                            ? 'text-purple-400 bg-purple-500/10'
-                            : 'text-gray-300 hover:text-white hover:bg-white/5'
-                        }`}
-                      >
-                        <span>{t.topic_label}</span>
-                        <span className="text-[10px] text-gray-500 ml-3">
-                          {Number(t.signal_count).toLocaleString()}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <span className="text-purple-400">{topicDisplay}</span>
-            )}
-            {' '}Intent Dashboard
-          </h1>
+        {/* Title + dataset switcher + collapse toggle */}
+        <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-white font-bold text-lg leading-tight whitespace-nowrap">
+              <span className="text-purple-400">Sales Match</span> Audience Explorer
+            </h1>
+            <select
+              value={offer}
+              onChange={e => handleOfferChange(e.target.value)}
+              className="appearance-none bg-white/5 border border-white/10 rounded-lg text-white text-xs font-medium px-2.5 py-1.5 cursor-pointer outline-none hover:border-white/20 focus:border-purple-500 transition-colors"
+            >
+              <option value="sales">Sales Hiring</option>
+              <option value="csm">CSM Hiring</option>
+            </select>
+            <select
+              value={sizing}
+              onChange={e => handleSizingChange(e.target.value)}
+              className="appearance-none bg-white/5 border border-white/10 rounded-lg text-white text-xs font-medium px-2.5 py-1.5 cursor-pointer outline-none hover:border-white/20 focus:border-purple-500 transition-colors"
+            >
+              <option value="revenue">Revenue $1M–$25M</option>
+              <option value="headcount">Headcount 1–250</option>
+            </select>
+          </div>
           <button
             onClick={() => setFiltersOpen(prev => !prev)}
             className="shrink-0 mt-1 p-1 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
@@ -392,14 +336,6 @@ export function FilterBar({ onCollapseChange }: { onCollapseChange?: (collapsed:
         <div className={`overflow-hidden transition-all duration-300 ${filtersOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
         {/* Multi-select popovers */}
         <div className="flex items-center gap-2 flex-wrap">
-          <MultiSelectPopover
-            label="Intent"
-            options={INTENT_ORDER}
-            labelMap={INTENT_LABELS}
-            filter={filters.intent}
-            onToggle={handleToggle('intent')}
-            onClear={handleClear('intent')}
-          />
           <MultiSelectPopover
             label={isMobile ? 'Age' : 'Age Range'}
             options={AGE_RANGE_ORDER}

@@ -1,0 +1,6 @@
+{
+  "sales_revenue": "/datasets/sales_revenue.json",
+  "sales_headcount": "/datasets/sales_headcount.json",
+  "csm_revenue": "/datasets/csm_revenue.json",
+  "csm_headcount": "/datasets/csm_headcount.json"
+}
