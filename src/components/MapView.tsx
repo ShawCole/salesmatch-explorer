@@ -212,7 +212,7 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
         },
       });
 
-      // County fill — full up to z6, crossfades with ZIPs from z6→z8, gone by z8
+      // County fill — full up to z7, fades z7→z8
       map.addLayer({
         id: 'county-fill',
         type: 'fill',
@@ -223,8 +223,7 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
           'fill-color': FILL_COLOR as any,
           'fill-opacity': [
             'interpolate', ['linear'], ['zoom'],
-            0, 0.7,
-            6, 0.7,
+            7, 0.7,
             8, 0,
           ] as any,
         },
@@ -244,8 +243,7 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
           ] as any,
           'line-opacity': [
             'interpolate', ['linear'], ['zoom'],
-            0, 1,
-            6, 1,
+            7, 1,
             8, 0,
           ] as any,
         },
@@ -272,18 +270,18 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
         },
       });
 
-      // ZCTA fill — starts appearing at z6, fully solid by z8 (overlaps with county fade)
+      // ZCTA fill — starts appearing at z7, fully solid by z8 (crossfades with county fade)
       map.addLayer({
         id: 'zcta-fill',
         type: 'fill',
         source: 'zctas',
         'source-layer': 'zctas',
-        minzoom: 6,
+        minzoom: 7,
         paint: {
           'fill-color': ZIP_FILL_COLOR as any,
           'fill-opacity': [
             'interpolate', ['linear'], ['zoom'],
-            6, 0,
+            7, 0,
             8, 0.7,
           ] as any,
         },
@@ -294,7 +292,7 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
         type: 'line',
         source: 'zctas',
         'source-layer': 'zctas',
-        minzoom: 6,
+        minzoom: 7,
         paint: {
           'line-color': ZIP_LINE_COLOR as any,
           'line-width': [
@@ -303,7 +301,7 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
           ] as any,
           'line-opacity': [
             'interpolate', ['linear'], ['zoom'],
-            6, 0,
+            7, 0,
             8, 1,
           ] as any,
         },
@@ -315,7 +313,7 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
         type: 'line',
         source: 'zctas',
         'source-layer': 'zctas',
-        minzoom: 6,
+        minzoom: 7,
         paint: {
           'line-color': '#22d3ee',
           'line-width': ['case', ['==', ['coalesce', ['feature-state', 'selected'], 0], 1], 2.5, 0] as any,
@@ -330,12 +328,12 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
         type: 'fill',
         source: 'zctas',
         'source-layer': 'zctas',
-        minzoom: 6,
+        minzoom: 7,
         paint: {
           'fill-color': 'rgba(0,0,0,0.6)',
           'fill-opacity': [
             'interpolate', ['linear'], ['zoom'],
-            6, 0,
+            7, 0,
             8, ['case', ['==', ['coalesce', ['feature-state', 'excluded'], 0], 1], 0.6, 0],
           ] as any,
         },
@@ -345,11 +343,11 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
         type: 'line',
         source: 'zctas',
         'source-layer': 'zctas',
-        minzoom: 6,
+        minzoom: 7,
         paint: {
           'line-color': '#ef4444',
           'line-width': ['case', ['==', ['coalesce', ['feature-state', 'excluded'], 0], 1], 2, 0] as any,
-          'line-opacity': ['interpolate', ['linear'], ['zoom'], 6, 0, 8, 0.8] as any,
+          'line-opacity': ['interpolate', ['linear'], ['zoom'], 7, 0, 8, 0.8] as any,
         },
       });
 
@@ -423,7 +421,7 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
       const zoom = map.getZoom();
       const allZips = apiData.geo.zips;
 
-      if (zoom >= 6) {
+      if (zoom >= 7) {
         // Viewport-aware: normalize only against visible zips
         const bounds = map.getBounds();
         // Pad bounds by ~1 county width (~0.5 degrees) so edge counties are included
