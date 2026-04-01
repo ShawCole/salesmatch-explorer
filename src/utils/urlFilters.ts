@@ -41,7 +41,8 @@ type FilterState = {
 
 const MULTI_SELECT_KEYS = [
   'intent', 'ageRange', 'gender', 'incomeRange', 'netWorth',
-  'creditRating', 'seniorityLevel', 'homeowner', 'city', 'county', 'language', 'state',
+  'creditRating', 'seniorityLevel', 'homeowner', 'employeeCount', 'companyRevenue',
+  'city', 'county', 'language', 'state',
 ] as const;
 
 // Use pipe delimiter — commas appear inside income/net-worth values
@@ -130,13 +131,20 @@ export function searchParamsToFilters(search: string): FilterState | null {
   return filters;
 }
 
-export function buildShareURL(filters: FilterState): string {
+export function buildShareURL(filters: FilterState, dataset?: string): string {
   const base = window.location.origin + window.location.pathname;
-  return base + filtersToSearchParams(filters);
+  let search = filtersToSearchParams(filters);
+  if (dataset) {
+    const sep = search ? '&' : '?';
+    search += `${sep}dataset=${dataset}`;
+  }
+  return base + search;
 }
 
-export function syncFiltersToURL(filters: FilterState) {
-  const search = filtersToSearchParams(filters);
-  const url = window.location.pathname + search;
+export function syncFiltersToURL(filters: FilterState, dataset?: string) {
+  const params = new URLSearchParams(filtersToSearchParams(filters).replace('?', ''));
+  if (dataset) params.set('dataset', dataset);
+  const search = params.toString();
+  const url = window.location.pathname + (search ? `?${search}` : '');
   window.history.replaceState(null, '', url);
 }

@@ -251,7 +251,7 @@ export function FilterProvider({ children }: { children: ReactNode }) {
 
   // Sync filter state → URL bar
   useEffect(() => {
-    syncFiltersToURL(filters);
+    syncFiltersToURL(filters, dataset);
   }, [filterKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const value = useMemo(() => ({

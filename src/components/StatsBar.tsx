@@ -53,7 +53,7 @@ function describeArea(
 }
 
 export function StatsBar({ hideExport }: { hideExport?: boolean } = {}) {
-  const { filters, apiData } = useFilters();
+  const { filters, apiData, dataset } = useFilters();
   const [linkCopied, setLinkCopied] = useState(false);
 
   const countyLabelMap = useMemo(() => {
@@ -66,11 +66,11 @@ export function StatsBar({ hideExport }: { hideExport?: boolean } = {}) {
   }, [apiData?.filterOptions?.counties]);
 
   const handleCopyLink = useCallback(() => {
-    const url = buildShareURL(filters);
+    const url = buildShareURL(filters, dataset);
     navigator.clipboard.writeText(url);
     setLinkCopied(true);
     setTimeout(() => setLinkCopied(false), 2000);
-  }, [filters]);
+  }, [filters, dataset]);
 
   const areaLabel = useMemo(
     () => describeArea(filters, countyLabelMap),
