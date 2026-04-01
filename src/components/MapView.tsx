@@ -361,168 +361,123 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
     };
   }, []);
 
-  // Build county→zips lookup for viewport normalization
-  // Ref to hold the latest normalization function so moveend can call it
+  // Refs that always hold the latest data — event handlers read from these
+  // so we NEVER need to remove/re-add event listeners when apiData changes.
+  // This is the key difference from before: no effect cleanup race conditions.
+  const apiDataRef = useRef(apiData);
+  apiDataRef.current = apiData;
   const applyZipDensity = useRef<() => void>(() => {});
 
-  // Apply feature states when data changes
+  // When apiData changes, clear old density and apply new (synchronous, no listener churn)
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady || !apiData) return;
 
-    const newCountyIds = new Set<string>();
-    const newZipIds = new Set<string>();
-
-    // Global zip normalization (used at low zoom before viewport takes over)
-    let globalMaxZip = 0;
-    for (const z of apiData.geo.zips) { if (z.total > globalMaxZip) globalMaxZip = z.total; }
-
-    // Clear previous county states (per-ID, matching original WMS approach)
+    // Clear previous county density
     for (const id of prevCountyIds.current) {
-      try {
-        map.setFeatureState(
-          { source: 'counties', sourceLayer: 'counties', id },
-          { density: 0 }
-        );
-      } catch { /* */ }
+      try { map.setFeatureState({ source: 'counties', sourceLayer: 'counties', id }, { density: 0 }); } catch { /* */ }
     }
-
-    // Clear previous zip states (per-ID)
     for (const id of prevZipIds.current) {
-      try {
-        map.setFeatureState(
-          { source: 'zctas', sourceLayer: 'zctas', id },
-          { density: 0 }
-        );
-      } catch { /* */ }
+      try { map.setFeatureState({ source: 'zctas', sourceLayer: 'zctas', id }, { density: 0 }); } catch { /* */ }
     }
 
-    // Set county feature states (raw counts)
+    // Apply new county density
+    const newCountyIds = new Set<string>();
     for (const c of apiData.geo.counties) {
       newCountyIds.add(c.fips);
-      try {
-        map.setFeatureState(
-          { source: 'counties', sourceLayer: 'counties', id: c.fips },
-          { density: c.total }
-        );
-      } catch { /* feature may not be loaded yet */ }
+      try { map.setFeatureState({ source: 'counties', sourceLayer: 'counties', id: c.fips }, { density: c.total }); } catch { /* */ }
     }
-
-    // Track all zip IDs
-    for (const z of apiData.geo.zips) {
-      newZipIds.add(z.zip);
-    }
+    const newZipIds = new Set<string>();
+    for (const z of apiData.geo.zips) { newZipIds.add(z.zip); }
 
     prevCountyIds.current = newCountyIds;
     prevZipIds.current = newZipIds;
 
-    // Compute and apply viewport-normalized zip density
-    const computeAndApplyZipDensity = () => {
-      const zoom = map.getZoom();
-      const allZips = apiData.geo.zips;
-
-      if (zoom >= 7) {
-        // Viewport-aware: normalize only against visible zips
-        const bounds = map.getBounds();
-        // Pad bounds by ~1 county width (~0.5 degrees) so edge counties are included
-        const pad = 0.5;
-        const west = bounds.getWest() - pad;
-        const east = bounds.getEast() + pad;
-        const south = bounds.getSouth() - pad;
-        const north = bounds.getNorth() + pad;
-
-        // Find visible zips by lat/lng
-        const visibleZips: GeoZip[] = [];
-        for (const z of allZips) {
-          if (z.lat != null && z.lng != null &&
-              z.lng >= west && z.lng <= east &&
-              z.lat >= south && z.lat <= north) {
-            visibleZips.push(z);
-          }
-        }
-
-        // Local max for normalization
-        let localMax = 0;
-        for (const z of visibleZips) { if (z.total > localMax) localMax = z.total; }
-        const norm = localMax > 0 ? 100 / localMax : 0;
-
-        // Apply normalized density to all zips (matching original WMS approach)
-        for (const z of allZips) {
-          try {
-            map.setFeatureState(
-              { source: 'zctas', sourceLayer: 'zctas', id: z.zip },
-              { density: z.total * norm }
-            );
-          } catch { /* */ }
-        }
-      } else {
-        // Below zip zoom: use global normalization
-        const norm = globalMaxZip > 0 ? 100 / globalMaxZip : 0;
-        for (const z of allZips) {
-          try {
-            map.setFeatureState(
-              { source: 'zctas', sourceLayer: 'zctas', id: z.zip },
-              { density: z.total * norm }
-            );
-          } catch { /* */ }
-        }
-      }
-    };
-
-    // Store in ref so moveend handler can access it
-    applyZipDensity.current = computeAndApplyZipDensity;
-
-    // Initial apply
-    computeAndApplyZipDensity();
-
-    // Re-apply density whenever new tiles load. PMTiles serves different
-    // features at different zoom levels — feature-state must be re-applied
-    // to newly loaded features as tile zoom changes.
-    const reapplyCountyDensity = () => {
-      for (const c of apiData.geo.counties) {
-        try {
-          map.setFeatureState(
-            { source: 'counties', sourceLayer: 'counties', id: c.fips },
-            { density: c.total }
-          );
-        } catch { /* */ }
-      }
-    };
-
-    const handleSourceData = (e: any) => {
-      if (e.sourceId === 'counties') {
-        reapplyCountyDensity();
-      }
-      if (e.sourceId === 'zctas' && e.isSourceLoaded) {
-        computeAndApplyZipDensity();
-      }
-    };
-
-    // Also re-apply on moveend — catches zoom transitions where
-    // new tile zoom levels load between sourcedata events
-    const handleMoveEndDensity = () => {
-      reapplyCountyDensity();
-    };
-
-    map.on('sourcedata', handleSourceData);
-    map.on('moveend', handleMoveEndDensity);
-    return () => {
-      map.off('sourcedata', handleSourceData);
-      map.off('moveend', handleMoveEndDensity);
-    };
+    // NO cleanup — we don't add/remove listeners here
   }, [mapReady, apiData]);
 
-  // Viewport-aware: re-normalize zip density on pan/zoom
+  // Register event handlers ONCE on map ready — they read from refs, never re-register
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
 
-    const onMoveEnd = () => { applyZipDensity.current(); setZoomLevel(map.getZoom()); };
+    // Reapply county density from latest ref data
+    const reapplyCounties = () => {
+      const data = apiDataRef.current;
+      if (!data) return;
+      for (const c of data.geo.counties) {
+        try { map.setFeatureState({ source: 'counties', sourceLayer: 'counties', id: c.fips }, { density: c.total }); } catch { /* */ }
+      }
+    };
+
+    // Compute and apply viewport-normalized zip density from latest ref data
+    const computeZipDensity = () => {
+      const data = apiDataRef.current;
+      if (!data) return;
+      const zoom = map.getZoom();
+      const allZips = data.geo.zips;
+
+      let globalMaxZip = 0;
+      for (const z of allZips) { if (z.total > globalMaxZip) globalMaxZip = z.total; }
+
+      if (zoom >= 7) {
+        const bounds = map.getBounds();
+        const pad = 0.5;
+        const west = bounds.getWest() - pad, east = bounds.getEast() + pad;
+        const south = bounds.getSouth() - pad, north = bounds.getNorth() + pad;
+
+        const visibleZips: GeoZip[] = [];
+        for (const z of allZips) {
+          if (z.lat != null && z.lng != null && z.lng >= west && z.lng <= east && z.lat >= south && z.lat <= north) {
+            visibleZips.push(z);
+          }
+        }
+
+        let localMax = 0;
+        for (const z of visibleZips) { if (z.total > localMax) localMax = z.total; }
+        const norm = localMax > 0 ? 100 / localMax : 0;
+
+        for (const z of allZips) {
+          try { map.setFeatureState({ source: 'zctas', sourceLayer: 'zctas', id: z.zip }, { density: z.total * norm }); } catch { /* */ }
+        }
+      } else {
+        const norm = globalMaxZip > 0 ? 100 / globalMaxZip : 0;
+        for (const z of allZips) {
+          try { map.setFeatureState({ source: 'zctas', sourceLayer: 'zctas', id: z.zip }, { density: z.total * norm }); } catch { /* */ }
+        }
+      }
+    };
+
+    applyZipDensity.current = computeZipDensity;
+
+    // These handlers are registered ONCE and never removed (until unmount)
+    const onSourceData = (e: any) => {
+      if (e.sourceId === 'counties') reapplyCounties();
+      if (e.sourceId === 'zctas') computeZipDensity();
+    };
+
+    const onMoveEnd = () => {
+      reapplyCounties();
+      computeZipDensity();
+      setZoomLevel(map.getZoom());
+    };
+
     const onZoom = () => { setZoomLevel(map.getZoom()); };
+
+    map.on('sourcedata', onSourceData);
     map.on('moveend', onMoveEnd);
     map.on('zoom', onZoom);
-    return () => { map.off('moveend', onMoveEnd); map.off('zoom', onZoom); };
-  }, [mapReady]);
+
+    // Initial apply
+    reapplyCounties();
+    computeZipDensity();
+
+    return () => {
+      map.off('sourcedata', onSourceData);
+      map.off('moveend', onMoveEnd);
+      map.off('zoom', onZoom);
+    };
+  }, [mapReady]); // Only depends on mapReady — registered ONCE
 
   // Auto-zoom to fit filtered geo data on load and filter changes
   useEffect(() => {
