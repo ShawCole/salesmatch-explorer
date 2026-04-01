@@ -13,19 +13,22 @@ import { CreditRatingCard } from './components/cards/CreditRatingCard';
 import { TopCitiesCard } from './components/cards/TopCitiesCard';
 import { FamilyDynamicsCard } from './components/cards/FamilyDynamicsCard';
 import { LanguageCard } from './components/cards/LanguageCard';
+import { HeadcountCard } from './components/cards/HeadcountCard';
+import { CompanyRevenueCard } from './components/cards/CompanyRevenueCard';
 
 const MOBILE_BREAKPOINT = 768;
 
 // Percentage-based positions for desktop draggable cards: [xPct, yPct]
-// 3-column layout clustered bottom-left (7 cards, no home-value)
 const PCT_POSITIONS: Record<string, [number, number]> = {
-  'family':      [0.025, 0.152],
-  'language':    [0.207, 0.152],
-  'credit':      [0.396, 0.152],
-  'income':      [0.025, 0.438],
-  'net-worth':   [0.236, 0.438],
-  'age-gender':  [0.025, 0.679],
-  'top-cities':  [0.236, 0.679],
+  'family':          [0.025, 0.100],
+  'language':        [0.207, 0.100],
+  'credit':          [0.396, 0.100],
+  'income':          [0.025, 0.380],
+  'net-worth':       [0.236, 0.380],
+  'headcount':       [0.450, 0.380],
+  'company-revenue': [0.025, 0.620],
+  'age-gender':      [0.236, 0.620],
+  'top-cities':      [0.450, 0.620],
 };
 
 function computePositions() {
@@ -40,9 +43,10 @@ function computePositions() {
 
 // Mobile grid order (left-to-right, top-to-bottom)
 const GRID_ORDER = [
-  'age-gender', 'top-cities',
-  'income',     'credit',
-  'net-worth',  'family',
+  'age-gender',       'top-cities',
+  'income',           'credit',
+  'net-worth',        'family',
+  'headcount',        'company-revenue',
   'language',
 ];
 
@@ -70,24 +74,28 @@ function App() {
 
   // Desktop: draggable card entries
   const desktopCards: { id: string; node: React.ReactNode }[] = [
-    { id: 'age-gender', node: <AgeGenderCard onClose={() => onToggle('age-gender')} /> },
-    { id: 'top-cities', node: <TopCitiesCard onClose={() => onToggle('top-cities')} /> },
-    { id: 'income',     node: <IncomeCard onClose={() => onToggle('income')} /> },
-    { id: 'credit',     node: <CreditRatingCard onClose={() => onToggle('credit')} /> },
-    { id: 'net-worth',  node: <NetWorthCard onClose={() => onToggle('net-worth')} /> },
-    { id: 'family',     node: <FamilyDynamicsCard onClose={() => onToggle('family')} /> },
-    { id: 'language',   node: <LanguageCard onClose={() => onToggle('language')} /> },
+    { id: 'age-gender',       node: <AgeGenderCard onClose={() => onToggle('age-gender')} /> },
+    { id: 'top-cities',       node: <TopCitiesCard onClose={() => onToggle('top-cities')} /> },
+    { id: 'income',           node: <IncomeCard onClose={() => onToggle('income')} /> },
+    { id: 'credit',           node: <CreditRatingCard onClose={() => onToggle('credit')} /> },
+    { id: 'net-worth',        node: <NetWorthCard onClose={() => onToggle('net-worth')} /> },
+    { id: 'family',           node: <FamilyDynamicsCard onClose={() => onToggle('family')} /> },
+    { id: 'language',         node: <LanguageCard onClose={() => onToggle('language')} /> },
+    { id: 'headcount',        node: <HeadcountCard onClose={() => onToggle('headcount')} /> },
+    { id: 'company-revenue',  node: <CompanyRevenueCard onClose={() => onToggle('company-revenue')} /> },
   ];
 
   // Mobile: grid card map
   const mobileCardMap: Record<string, React.ReactNode> = {
-    'age-gender': <AgeGenderCard onClose={() => onToggle('age-gender')} compact />,
-    'top-cities': <TopCitiesCard onClose={() => onToggle('top-cities')} compact />,
-    'income':     <IncomeCard onClose={() => onToggle('income')} compact />,
-    'credit':     <CreditRatingCard onClose={() => onToggle('credit')} compact />,
-    'net-worth':  <NetWorthCard onClose={() => onToggle('net-worth')} compact />,
-    'family':     <FamilyDynamicsCard onClose={() => onToggle('family')} compact />,
-    'language':   <LanguageCard onClose={() => onToggle('language')} compact />,
+    'age-gender':       <AgeGenderCard onClose={() => onToggle('age-gender')} compact />,
+    'top-cities':       <TopCitiesCard onClose={() => onToggle('top-cities')} compact />,
+    'income':           <IncomeCard onClose={() => onToggle('income')} compact />,
+    'credit':           <CreditRatingCard onClose={() => onToggle('credit')} compact />,
+    'net-worth':        <NetWorthCard onClose={() => onToggle('net-worth')} compact />,
+    'family':           <FamilyDynamicsCard onClose={() => onToggle('family')} compact />,
+    'language':         <LanguageCard onClose={() => onToggle('language')} compact />,
+    'headcount':        <HeadcountCard onClose={() => onToggle('headcount')} compact />,
+    'company-revenue':  <CompanyRevenueCard onClose={() => onToggle('company-revenue')} compact />,
   };
 
   const visibleMobileCards = GRID_ORDER.filter(id => visibility[id]);

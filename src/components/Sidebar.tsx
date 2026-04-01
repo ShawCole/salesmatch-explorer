@@ -6,6 +6,8 @@ import {
   MapPin,
   Heart,
   Languages,
+  Building2,
+  TrendingUp,
 } from 'lucide-react';
 
 export interface CardConfig {
@@ -22,6 +24,8 @@ export const CARD_CONFIGS: CardConfig[] = [
   { id: 'net-worth', label: 'Net Worth', icon: <DollarSign size={16} /> },
   { id: 'family', label: 'Family Dynamics', icon: <Heart size={16} /> },
   { id: 'language', label: 'Primary Language', icon: <Languages size={16} /> },
+  { id: 'headcount', label: 'Headcount', icon: <Building2 size={16} /> },
+  { id: 'company-revenue', label: 'Est. Revenue', icon: <TrendingUp size={16} /> },
 ];
 
 interface Props {

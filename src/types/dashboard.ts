@@ -63,6 +63,8 @@ export interface Aggregations {
   language: LanguageCount[];
   family: FamilyAgg;
   seniority: SeniorityCount[];
+  employee_count: BucketCount[];
+  company_revenue: BucketCount[];
 }
 
 export interface FilterOptionCity {

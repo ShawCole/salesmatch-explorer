@@ -135,6 +135,8 @@ export function aggregateRecords(
   const cityMap = new Map<string, number>();
   const langMap = new Map<string, number>();
   const senMap = new Map<string, number>();
+  const empCountMap = new Map<string, number>();
+  const compRevMap = new Map<string, number>();
   let mY = 0, mN = 0, cY = 0, cN = 0;
 
   for (const rec of records) {
@@ -191,6 +193,8 @@ export function aggregateRecords(
     if (rec.l) langMap.set(rec.l, (langMap.get(rec.l) || 0) + 1);
     // Seniority
     if (rec.e) senMap.set(rec.e, (senMap.get(rec.e) || 0) + 1);
+    if (rec.ec) empCountMap.set(rec.ec, (empCountMap.get(rec.ec) || 0) + 1);
+    if (rec.cr2) compRevMap.set(rec.cr2, (compRevMap.get(rec.cr2) || 0) + 1);
     // Family
     if (rec.m === 'Y') mY++;
     else if (rec.m === 'N') mN++;
@@ -271,6 +275,8 @@ export function aggregateRecords(
       language: languages,
       family,
       seniority,
+      employee_count: toSortedBuckets(empCountMap),
+      company_revenue: toSortedBuckets(compRevMap),
     },
     filterOptions: { cities: cityOptions, counties: countyOptions, languages: langOptions },
     ms: 0,
