@@ -368,7 +368,7 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
   apiDataRef.current = apiData;
   const applyZipDensity = useRef<() => void>(() => {});
 
-  // When apiData changes, clear old density and apply new (synchronous, no listener churn)
+  // When apiData changes, update tracked IDs and trigger full reapply
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady || !apiData) return;
@@ -381,19 +381,31 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
       try { map.setFeatureState({ source: 'zctas', sourceLayer: 'zctas', id }, { density: 0 }); } catch { /* */ }
     }
 
-    // Apply new county density
+    // Track new IDs
     const newCountyIds = new Set<string>();
-    for (const c of apiData.geo.counties) {
-      newCountyIds.add(c.fips);
-      try { map.setFeatureState({ source: 'counties', sourceLayer: 'counties', id: c.fips }, { density: c.total }); } catch { /* */ }
-    }
+    for (const c of apiData.geo.counties) newCountyIds.add(c.fips);
     const newZipIds = new Set<string>();
-    for (const z of apiData.geo.zips) { newZipIds.add(z.zip); }
-
+    for (const z of apiData.geo.zips) newZipIds.add(z.zip);
     prevCountyIds.current = newCountyIds;
     prevZipIds.current = newZipIds;
 
-    // NO cleanup — we don't add/remove listeners here
+    // Apply immediately + schedule repeated applies to catch tile loads
+    // This is the nuclear approach: keep re-applying until tiles are loaded
+    const apply = () => {
+      const data = apiDataRef.current;
+      if (!data) return;
+      for (const c of data.geo.counties) {
+        try { map.setFeatureState({ source: 'counties', sourceLayer: 'counties', id: c.fips }, { density: c.total }); } catch { /* */ }
+      }
+    };
+
+    apply();
+    // Re-apply after short delays to catch tiles that load async
+    const t1 = setTimeout(apply, 100);
+    const t2 = setTimeout(apply, 500);
+    const t3 = setTimeout(apply, 1500);
+
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, [mapReady, apiData]);
 
   // Register event handlers ONCE on map ready — they read from refs, never re-register
