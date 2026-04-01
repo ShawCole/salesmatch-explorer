@@ -268,7 +268,7 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
         type: 'fill',
         source: 'zctas',
         'source-layer': 'zctas',
-        minzoom: 7,
+        minzoom: 6,
         paint: {
           'fill-color': ZIP_FILL_COLOR as any,
           'fill-opacity': 0,
@@ -280,7 +280,7 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
         type: 'line',
         source: 'zctas',
         'source-layer': 'zctas',
-        minzoom: 7,
+        minzoom: 6,
         paint: {
           'line-color': ZIP_LINE_COLOR as any,
           'line-width': [
@@ -297,7 +297,7 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
         type: 'line',
         source: 'zctas',
         'source-layer': 'zctas',
-        minzoom: 7,
+        minzoom: 6,
         paint: {
           'line-color': '#22d3ee',
           'line-width': ['case', ['==', ['coalesce', ['feature-state', 'selected'], 0], 1], 2.5, 0] as any,
@@ -312,7 +312,7 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
         type: 'fill',
         source: 'zctas',
         'source-layer': 'zctas',
-        minzoom: 7,
+        minzoom: 6,
         paint: {
           'fill-color': 'rgba(0,0,0,0.6)',
           'fill-opacity': [
@@ -327,7 +327,7 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
         type: 'line',
         source: 'zctas',
         'source-layer': 'zctas',
-        minzoom: 7,
+        minzoom: 6,
         paint: {
           'line-color': '#ef4444',
           'line-width': ['case', ['==', ['coalesce', ['feature-state', 'excluded'], 0], 1], 2, 0] as any,
@@ -416,7 +416,7 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
       let globalMaxZip = 0;
       for (const z of allZips) { if (z.total > globalMaxZip) globalMaxZip = z.total; }
 
-      if (zoom >= 7) {
+      if (zoom >= 6) {
         const bounds = map.getBounds();
         const pad = 0.5;
         const west = bounds.getWest() - pad, east = bounds.getEast() + pad;
@@ -463,15 +463,15 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
       setZoomLevel(z);
 
       // Manually control county/ZIP opacity crossfade to avoid interpolation bugs
-      // Counties: full at z7, fade to 0 at z8
-      const countyOpacity = z <= 7 ? 0.7 : z >= 8 ? 0 : 0.7 * (8 - z);
-      const countyLineOpacity = z <= 7 ? 1 : z >= 8 ? 0 : (8 - z);
+      // Counties: full below z6, fade to 0 at z7
+      const countyOpacity = z <= 6 ? 0.7 : z >= 7 ? 0 : 0.7 * (7 - z);
+      const countyLineOpacity = z <= 6 ? 1 : z >= 7 ? 0 : (7 - z);
       try { map.setPaintProperty('county-fill', 'fill-opacity', countyOpacity); } catch { /* */ }
       try { map.setPaintProperty('county-outline', 'line-opacity', countyLineOpacity); } catch { /* */ }
 
-      // ZIPs: invisible at z7, full at z8
-      const zipOpacity = z <= 7 ? 0 : z >= 8 ? 0.7 : 0.7 * (z - 7);
-      const zipLineOpacity = z <= 7 ? 0 : z >= 8 ? 1 : (z - 7);
+      // ZIPs: invisible below z6, full at z7
+      const zipOpacity = z <= 6 ? 0 : z >= 7 ? 0.7 : 0.7 * (z - 6);
+      const zipLineOpacity = z <= 6 ? 0 : z >= 7 ? 1 : (z - 6);
       try { map.setPaintProperty('zcta-fill', 'fill-opacity', zipOpacity); } catch { /* */ }
       try { map.setPaintProperty('zcta-outline', 'line-opacity', zipLineOpacity); } catch { /* */ }
     };
@@ -643,8 +643,8 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
       const zoom = map.getZoom();
       const point = e.point;
 
-      // Check ZCTA layer first (visible at z6+, interactive at z7+)
-      if (zoom >= 7) {
+      // Check ZCTA layer first (visible at z6+, interactive at z6+)
+      if (zoom >= 6) {
         const zctaFeatures = map.queryRenderedFeatures(point, { layers: ['zcta-fill'] });
         if (zctaFeatures.length > 0) {
           const f = zctaFeatures[0];
@@ -664,8 +664,8 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
         }
       }
 
-      // County layer (visible up to z8, interactive below z8)
-      if (zoom < 8) {
+      // County layer (visible up to z7, interactive below z7)
+      if (zoom < 7) {
         const countyFeatures = map.queryRenderedFeatures(point, { layers: ['county-fill'] });
         if (countyFeatures.length > 0) {
           const f = countyFeatures[0];
@@ -701,8 +701,8 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
       const zoom = map.getZoom();
       const point = e.point;
 
-      // ZIP click — toggle in/out of dataset (z8+ when ZIPs are fully solid)
-      if (zoom >= 8) {
+      // ZIP click — toggle in/out of dataset (z7+ when ZIPs are fully solid)
+      if (zoom >= 7) {
         const zctaFeatures = map.queryRenderedFeatures(point, { layers: ['zcta-fill'] });
         if (zctaFeatures.length > 0) {
           const zip = zctaFeatures[0].properties?.GEOID20;
@@ -730,8 +730,8 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
         }
       }
 
-      // County click — zoom in (below z8)
-      if (zoom < 8) {
+      // County click — zoom in (below z7)
+      if (zoom < 7) {
         const countyFeatures = map.queryRenderedFeatures(point, { layers: ['county-fill'] });
         if (countyFeatures.length > 0) {
           const f = countyFeatures[0];
