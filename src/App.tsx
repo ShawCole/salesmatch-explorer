@@ -43,10 +43,10 @@ function computePositions() {
 
 // Mobile grid order (left-to-right, top-to-bottom)
 const GRID_ORDER = [
+  'headcount',        'company-revenue',
   'age-gender',       'top-cities',
   'income',           'credit',
   'net-worth',        'family',
-  'headcount',        'company-revenue',
   'language',
 ];
 
