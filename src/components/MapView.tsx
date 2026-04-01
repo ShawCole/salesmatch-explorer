@@ -25,7 +25,7 @@ function ensureProtocol() {
 const DARK_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   name: 'Dark',
-  glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+  glyphs: 'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf',
   sources: {
     'osm-tiles': {
       type: 'raster',
@@ -222,11 +222,7 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
         'source-layer': 'counties',
         paint: {
           'fill-color': FILL_COLOR as any,
-          'fill-opacity': [
-            'interpolate', ['linear'], ['zoom'],
-            7, 0.7,
-            8, 0,
-          ] as any,
+          'fill-opacity': 0.7,
         },
       });
 
@@ -241,11 +237,7 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
             'interpolate', ['linear'], ['coalesce', ['feature-state', 'density'], 0],
             0, 0, 1, 0.5, 100, 1.5,
           ] as any,
-          'line-opacity': [
-            'interpolate', ['linear'], ['zoom'],
-            7, 1,
-            8, 0,
-          ] as any,
+          'line-opacity': 1,
         },
       });
 
@@ -279,11 +271,7 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
         minzoom: 7,
         paint: {
           'fill-color': ZIP_FILL_COLOR as any,
-          'fill-opacity': [
-            'interpolate', ['linear'], ['zoom'],
-            7, 0,
-            8, 0.7,
-          ] as any,
+          'fill-opacity': 0,
         },
       });
 
@@ -299,11 +287,7 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
             'interpolate', ['linear'], ['coalesce', ['feature-state', 'density'], 0],
             0, 0, 1, 0.5, 100, 1.5,
           ] as any,
-          'line-opacity': [
-            'interpolate', ['linear'], ['zoom'],
-            7, 0,
-            8, 1,
-          ] as any,
+          'line-opacity': 0,
         },
       });
 
@@ -474,7 +458,23 @@ export function MapView({ mobilePanelOpen }: { mobilePanelOpen?: boolean }) {
       setZoomLevel(map.getZoom());
     };
 
-    const onZoom = () => { setZoomLevel(map.getZoom()); };
+    const onZoom = () => {
+      const z = map.getZoom();
+      setZoomLevel(z);
+
+      // Manually control county/ZIP opacity crossfade to avoid interpolation bugs
+      // Counties: full at z7, fade to 0 at z8
+      const countyOpacity = z <= 7 ? 0.7 : z >= 8 ? 0 : 0.7 * (8 - z);
+      const countyLineOpacity = z <= 7 ? 1 : z >= 8 ? 0 : (8 - z);
+      try { map.setPaintProperty('county-fill', 'fill-opacity', countyOpacity); } catch { /* */ }
+      try { map.setPaintProperty('county-outline', 'line-opacity', countyLineOpacity); } catch { /* */ }
+
+      // ZIPs: invisible at z7, full at z8
+      const zipOpacity = z <= 7 ? 0 : z >= 8 ? 0.7 : 0.7 * (z - 7);
+      const zipLineOpacity = z <= 7 ? 0 : z >= 8 ? 1 : (z - 7);
+      try { map.setPaintProperty('zcta-fill', 'fill-opacity', zipOpacity); } catch { /* */ }
+      try { map.setPaintProperty('zcta-outline', 'line-opacity', zipLineOpacity); } catch { /* */ }
+    };
 
     map.on('sourcedata', onSourceData);
     map.on('moveend', onMoveEnd);
